@@ -407,6 +407,44 @@ are a stand-in for the unlit count and not a measurement of it. The factor of tw
 agrees with the unlit hull excess that [hull-tone.md](hull-tone.md) decomposes. This run does not
 separate the hull's tone from the light's law.
 
+### Ours at a forced range
+
+`OAG_DEBUG_ENGINE_LIGHT_D` pins the range wander of every craft to one value
+(`crates/raceplay/src/engine_light.rs`). On Omega the range is then `Radius + D`, which is the
+quantity that the original's forced-range frames hold. A release build of this change rendered
+ticks 600 to 603 at each of nine values, with the method of the run above. The position wander
+stays live in ours, so the four frames of one range differ.
+
+With the variable not set, tick 600 of this build is the same as tick 600 of the nightly
+(20,119 pixels, excess 954,672).
+
+| Forced range | Original: warm pixels | Ours: warm pixels | Ratio | Original: summed excess | Ours: summed excess | Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| none (`D = -1.0`) | 496 | 910 | 1.8 | 25,120 | 49,108 | 2.0 |
+| 0.25 | 454 | 919 | 2.0 | 22,901 | 49,384 | 2.2 |
+| 0.5 | 921 | 1,872 | 2.0 | 37,380 | 82,820 | 2.2 |
+| 0.75 | 1,707 | 4,740 | 2.8 | 63,696 | 189,164 | 3.0 |
+| 1.0 | 3,275 | 8,212 | 2.5 | 106,450 | 334,864 | 3.1 |
+| 1.25 | 7,672 | 12,012 | 1.6 | 287,589 | 533,641 | 1.9 |
+| 1.5 | 9,245 | 15,530 | 1.7 | 355,657 | 728,700 | 2.0 |
+| 1.75 | 12,548 | 18,398 | 1.5 | 519,447 | 905,148 | 1.7 |
+| 2.0 | 13,182 | 20,569 | 1.6 | 550,931 | 1,046,835 | 1.9 |
+
+Each value is the mean of four frames.
+
+**Ours follows the curve.** The count and the excess rise with the range at every step from 0.25,
+as the original's do. At a range of 0.01 or less ours submits no light, and the count at
+`D = -1.0` (910) is ours' unlit count.
+
+**Ours' unlit hull counts 1.8 times the original's, and its excess is 2.0 times.** This is the
+measurement that the 60-tick run did not have.
+
+**The light's own share is also high.** Subtract the unlit excess from each side. Ours is then
+1.8 to 2.1 times the original's from range 1.25 to 2.0. From 0.5 to 1.0 it is 2.7 to 3.6 times. A
+light that multiplies an over-bright hull gives a constant factor. The larger factor at small
+ranges is not explained by that. Two candidates are not measured: the scale of the normal that
+the original does not normalise, and the position wander (confidence 40 for each).
+
 **Cross-title.** 2048 was not checked: no 2048 package was on the machine that made this run.
 
 ## Names

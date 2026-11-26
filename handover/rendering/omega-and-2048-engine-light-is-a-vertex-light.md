@@ -2,7 +2,7 @@
 status: measure
 titles: [omega, 2048]
 updated: 2026-11-26
-summary: "Engine light, SH ambient, vertex colour wired; acceptance run: ours 2.5x the mean; open: range curve, N scale, sun term, reflection"
+summary: "Engine light wired and follows the range curve at 1.8 to 3.6x the excess; open: small-range factor, N scale, sun term, reflection"
 size: S (30)
 difficulty: easy (60)
 ---
@@ -78,10 +78,11 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
    reaches the shader. Ours' mean is 11,708 against the original's 4,712, and its median is 12,964 against 2,700.
    Method, table and limits: `docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Ours over 60 consecutive ticks".
    Not done: a render of ours with the light off, and a run with the compare-page profile's flags.
-2. Add a forced-range path for the test (the jitter's `d` fixed) and compare with the original's
-   curve at `Radius + w`: 1.0 gives 3,275 warm pixels, 1.5 gives 9,245, 2.0 gives 13,182 (summed
-   excess 106,450, 355,657 and 550,931). Ours' count should follow the curve; its excess is expected
-   to run high by the hull's own over-brightness until the hull tone is fixed.
+2. **DONE 2026-11-26.** `OAG_DEBUG_ENGINE_LIGHT_D` pins the range wander. Ours follows the original's curve
+   at nine ranges. Ours' unlit excess is 2.0 times the original's. Net of that, the light's share is 1.8 to 2.1
+   times from range 1.25 to 2.0 and 2.7 to 3.6 times from 0.5 to 1.0. Table:
+   `docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Ours at a forced range". Open from it: why the
+   factor is larger at small ranges (the normal's scale and the position wander are not measured).
 3. **Hull tone. The two reads are made (2026-11-16, `hull-tone-re`); the ambient and the vertex colour are wired, one read is owed.**
    Evidence, program and numbers: `docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The bound constants".
    - **Wired (2026-11-16, `hull-sh-ambient`): the ambient.** `oag_vex::shprobes` reads `track.shprobes`;
