@@ -273,6 +273,76 @@ box is `shadow * SH * albedo` and `(1 - shadow) * SH * albedo`): their ratio is 
 factor is `N.L`: dump ours' `n . dir` for that panel and compare with the original's sun share over its ambient share times
 `kmix * SH / sun`.
 
+### The shadow term, read by knockout (2026-11-26)
+
+This is the read that the recipe above asks for, made on the port on a Steam Deck.
+
+**Method.** `scripts/wipeout-pc-replay-shadow-live.py` started the port (the 1.07 eboot, sha256
+`3a52e910...f644c`). A pad replay walked to the Modesto Heights grid: WipEout HD mode, Single
+Race, the classic Feisar skin, grid slot 8. The script switched the engine light off and found the
+lighting object at `0x800eb2898`, the address in "Method notes". It then held two states with
+`Sun color` at 0: A is `K 4, Ks 0` and B is `K 0, Ks 4`. Each state had 2 s to settle and 5 s of
+frames at one frame a second. The frames are the port's 1280x720 screenshots.
+`scripts/wipeout-pc-replay-shadow-ratio.py` gives `A / (A + B)` per box on sRGB-decoded means.
+
+The rival craft return after about 25 s and move the player's craft, so the states are short.
+Each mean is of four frames, not the eight that the recipe asks for.
+
+| Box (1280x720) | A, `shadow * SH * albedo` | B, `(1 - shadow) * SH * albedo` | `shadow` (R, G, B) |
+| --- | --- | --- | --- |
+| housing bay `(590, 470)-(690, 560)` | `(0.012, 0.016, 0.029)` | `(0.111, 0.123, 0.130)` | `0.10, 0.11, 0.18` |
+| spine panel `(610, 410)-(670, 450)` | `(0.122, 0.137, 0.072)` | `(0.214, 0.187, 0.029)` | `0.36, 0.42, 0.71` |
+| track panel `(340, 360)-(440, 410)`, a control | `(0.076, 0.089, 0.089)` | `(0.080, 0.093, 0.095)` | `0.49, 0.49, 0.48` |
+
+The track panel does not read `K` or `Ks`, and its A and B agree within 4 %. The exposure of the
+two states is thus the same within 4 %.
+
+**The original's `shadow` in the housing bay is about `0.10` (confidence 70).** It removes about
+nine tenths of the sun term there, on red and green. The blue value is higher because the flame's
+glow is in the box in both states. A second sign agrees: with only `Sun color` at 0 the bay reads
+`(0.012, 0.019, 0.042)`, against `(0.011, 0.016, 0.036)` as shipped. The sun adds nothing that
+this read can measure in the bay.
+
+**It is not the hull shadowing itself alone.** A second run used a Time Trial. The craft is
+alone on the pole slot there, and that slot is in the shade of the circuit. Each state has eight frames.
+The boxes are for that pose.
+
+| Box (1280x720), pole slot | `shadow` as shipped (R, G) | `shadow` with the map term forced to 1 (R, G) |
+| --- | --- | --- |
+| housing bay `(590, 490)-(690, 570)` | `0.08, 0.07` | `0.18, 0.18` |
+| spine `(610, 430)-(670, 465)` | `0.01, 0.01` | `0.12, 0.12` |
+| track panel `(780, 390)-(880, 440)`, a control | `0.54, 0.54` | `0.53, 0.53` |
+
+The spine is the top of the hull, and no part of the hull is above it. Its `shadow` is `0.01`, so
+a caster that is not the craft removes the sun there (confidence 75). On grid slot 8 the same
+panel reads `0.36` to `0.42`, so the term follows where the craft stands.
+
+**The road's knockout does not release it.** The second column has the two literals at
+`0x018632c0` at 0, which makes `S = 1` on the road ([track-shadow.md](track-shadow.md)). The
+hull's term moves from `0.01` to `0.12` on the spine. Most of the hull's shade is thus not the
+exponential term that the knockout removes, or the knockout does not reach the hull's compared
+taps. The two are not separated.
+
+**The caster lists, read on both slots.** The second list's gate `0x020e4340` reads 0. One stopped
+read of the model instance list on each slot shows two records, and neither has bit 1 of `+0x110`.
+The list is refilled each frame, so a read can land on a part-filled list (confidence 40 that no
+model is a caster here). `shadowCoeffs`' fourth row reads `(200.7, -799.2, -80, 0)`.
+
+**Open.** What the hull's `shadowMapSampler` holds on a slot in the shade is not read. A dump of
+the texture that the hull draw binds, or a read of the pass that fills it, is the next step.
+
+**Ours on that panel.** Under `--shadows original` ours' hull shadow takes `8 %` off the housing
+box ("The decomposition"). The original's term takes about `90 %`. With the default, `off`, ours
+has no hull shadow. This can account for a sun term in ours that is several times the original's
+on the housing.
+
+**Limits.** The values are after the tone map, which compresses the bright state. The true
+`shadow` in the bay can be lower than `0.10`. The skin is the classic one and the pair's is
+`FEISAR_C1`. The boxes were placed by eye for this pose and are not the pair's boxes. Ours'
+`sun_occlusion` was not rendered for the same pixels in this run.
+
+**Cross-title.** 2048 was not checked: no 2048 package was on the machine that made this run.
+
 ### Wired (2026-11-16, lane `hull-sh-ambient`)
 
 The ambient is wired for Omega's race hulls (every craft on the grid, opponents too; wrecks keep the constant ambient).

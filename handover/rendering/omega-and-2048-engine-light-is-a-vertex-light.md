@@ -2,7 +2,7 @@
 status: measure
 titles: [omega, 2048]
 updated: 2026-11-26
-summary: "Engine light wired and follows the range curve at 1.8 to 3.6x the excess; open: small-range factor, N scale, sun term, reflection"
+summary: "Engine light follows the range curve; hull shadow term follows the circuit shade (0.01 at Modesto pole); open: its source, N scale, reflection"
 size: S (30)
 difficulty: easy (60)
 ---
@@ -104,6 +104,12 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      ambient:** ours' ambient is still `1.4` to `2.1` times the original's (alone) and `1.9` to `2.7` times by the increment,
      the same order as the sun term, so the albedo (texel times vertex colour) or the lit normal may carry the whole
      excess: redo Read 2 with those numbers (`hull-tone.md`, "Wired").
+   - **Read 2026-11-26: the original's hull `shadow` follows the shade of the circuit, not the hull alone.** On
+     Modesto's slot 8 the housing bay reads `0.10` and the spine `0.36` to `0.42`. On the pole slot, in the shade,
+     the spine reads `0.01`. The road's `S = 1` knockout moves that only to `0.12`. Ours' hull shadow takes `8 %` off
+     the housing box under `--shadows original`, and nothing under `off`. `hull-tone.md`, "The shadow term, read by
+     knockout". Next: read what the hull's `shadowMapSampler` holds (a dump of the bound texture, or the pass that
+     fills it).
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the
