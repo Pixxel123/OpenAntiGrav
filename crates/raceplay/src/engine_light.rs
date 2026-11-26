@@ -288,8 +288,30 @@ impl RaceView {
     /// `EngineFlare_Update` rewrite of `flare+0x250`. Called from the exhaust
     /// tick, on a title with an engine light law.
     pub(super) fn advance_engine_light_jitter(&mut self, slot: usize) {
-        self.engine_light_jitter[slot] = Jitter::draw(&mut self.engine_light_rng[slot]);
+        let mut jitter = Jitter::draw(&mut self.engine_light_rng[slot]);
+        if let Some(d) = forced_range_wander() {
+            jitter.d = d;
+        }
+        self.engine_light_jitter[slot] = jitter;
     }
+}
+
+/// The range wander `OAG_DEBUG_ENGINE_LIGHT_D` pins every craft's light to, in the draw's own
+/// units (`-1` to `1`, scaled by the law): a diagnostic that renders the light at one range, as
+/// the original's forced-range frames are
+/// (`docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Live check"). Unset, or not a
+/// number, leaves the draw alone; the draw is still made, so the stream stays where it was.
+#[cfg(feature = "view")]
+fn forced_range_wander() -> Option<f32> {
+    static FORCED: std::sync::OnceLock<Option<f32>> = std::sync::OnceLock::new();
+    *FORCED
+        .get_or_init(|| parse_forced_range_wander(std::env::var("OAG_DEBUG_ENGINE_LIGHT_D").ok()))
+}
+
+/// The value of `OAG_DEBUG_ENGINE_LIGHT_D` as a wander, if it is a finite number.
+#[cfg(feature = "view")]
+fn parse_forced_range_wander(value: Option<String>) -> Option<f32> {
+    value?.trim().parse::<f32>().ok().filter(|d| d.is_finite())
 }
 
 #[cfg(test)]
@@ -531,6 +553,18 @@ mod tests {
     }
 
     /// Every draw stays inside the unit range the law scales.
+    #[cfg(feature = "view")]
+    #[test]
+    fn the_forced_wander_is_a_finite_number_or_nothing() {
+        let parse = |v: &str| parse_forced_range_wander(Some(v.to_owned()));
+        assert_eq!(parse(" 0.5 "), Some(0.5));
+        assert_eq!(parse("-1"), Some(-1.0));
+        assert_eq!(parse(""), None);
+        assert_eq!(parse("on"), None);
+        assert_eq!(parse("nan"), None);
+        assert_eq!(parse_forced_range_wander(None), None);
+    }
+
     #[test]
     fn draws_stay_within_one() {
         let mut rng = Rng::new(engine_light_seed(3));
