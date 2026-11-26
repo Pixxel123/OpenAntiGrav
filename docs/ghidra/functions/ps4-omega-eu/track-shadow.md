@@ -129,6 +129,40 @@ So the map of one craft holds the circuit pieces near it and the craft, and both
 This is the same shape as the 2048 read below. The matrices of the pass come from a block for
 each instance at `0x020e3550`. Their law, the size of the map and its program were not read.
 
+**The map of an instance, read live (confidence 80 for the values, 60 for the law).**
+`scripts/wipeout-pc-replay-shadow-live.py` with `DUMP=1` stopped the port on Modesto's grid and
+read the blocks that the pass uses. Two runs: a Time Trial on the pole slot, and a Single Race on
+slot 8 with eight craft.
+
+| Block | What it holds | Pole slot | Slot 8 |
+| --- | --- | --- | --- |
+| `0x020e3550 + 0x40 * i` | the view-projection of instance `i`, row vectors | one filled | eight filled |
+| its third axis, normalised | the view direction | `(0.4016, -0.5098, 0.7608)` | the same |
+| its first two column lengths | `1 /` the half-extents | `5.294` by `4.639` units | `5.028` by `4.775` units |
+| its third column length | `1 /` the depth span | `377.0` units | `377.0` units |
+| the world point at depth 1 on its axis | the far plane | `(-307.86, 195.29, -428.06)` | `(-288.19, 194.08, -286.48)` |
+| `0x020e3790 + 0x40 * i` | the projection alone: `diag(sx, sy, -1 / 377)`, `tz = -378 / 377` | `sx 0.18889, sy 0.21556` | `sx 0.19889, sy 0.20943` |
+| `0x020e39d0` | the 16-byte entry of the node query | `(-611.08, 580.20, -1002.45, 1)` | `(-591.41, 578.99, -860.87, 1)` |
+| `0x020e3ab8` | a texture descriptor word, `0x707fc1ff` | width and height fields `0x1ff` | the same |
+
+`Lighting.Sun direction` read `(-0.4016, 0.5098, -0.7608)` in both runs.
+
+- **The map is orthographic and looks along the sun.** The view direction is the sun direction
+  times `-1`, to four digits.
+- **The far plane is at the craft and the map reaches 377 units toward the sun.** The near plane
+  is at 1 and the far plane at 378 (`-1 / 377` and `-378 / 377`). On slot 8 the far-plane point is
+  within 6 units of ours' spawn on that slot, `(-290.5, 196.7, -291.7)`.
+- **The box is about 10 by 9.5 units and follows the craft.** The half-extents and the first two
+  axes differ between the two poses, so they are fitted to the craft. The fit was not read.
+- **The query's entry is the far-plane point plus 755 units of the sun direction**, in both runs.
+  In the Single Race the entries after the first read 0. That nodes are queued for the first
+  instance alone is not shown: the read is one stop of one frame.
+- **The map is 512 by 512 (confidence 65).** The descriptor word has `0x1ff` in its low 14 bits
+  and in the next 14. In the console's texture descriptor those are a width and a height less 1.
+- **The mask is `0x2000` on Modesto.** The byte at `*0x01ed4950` read 1. The two floats of the
+  compare read `-50.0` (`0x01eb2a64`) and `200.69` (`0x01eb2da4`). The second is equal to
+  `shadowCoeffs`' `c0` in the same frame.
+
 **`track_proximity_shadow` is in the executable and nothing uses it (confidence 70).** The shadow
 module's static initialiser `FUN_01670010` registers a depth-only pair by that name (`LEA` at
 `0x01670239` and `0x016702bd`). The programs are at `0x019c97e0` and `0x019c96f0`. A scan of the
@@ -144,8 +178,9 @@ loader has the two tags was not checked: no 2048 executable was on the machine t
 
 ## Open
 
-- The pass for each model instance at `0x015fb15e`: the law of its matrices (`0x020e3550`), the query `FUN_0165a210`,
-  the size and the program of the map, and the bind that gives it to the hull's `shadowMapSampler`.
+- The pass for each model instance at `0x015fb15e`: the fit of its box and its first two axes to the craft, the query
+  `FUN_0165a210`, the program of the map, and the bind that gives it to the hull's `shadowMapSampler`.
+- Whether circuit nodes are queued for every instance or for the first alone.
 - The two floats that choose between bits `0x2000` and `0x4000` (`0x01eb2a64`, `0x01eb2da4`).
 
 - Which models set bit 1 of `+0x110`, and what the second caster list (`*0x020e4268`) holds.
