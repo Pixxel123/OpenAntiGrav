@@ -88,8 +88,27 @@ So the default is that a piece of the circuit casts a shadow onto a craft, and a
 does not. This agrees with the hull read: on Modesto's pole slot the top of the hull gets no sun,
 and no craft is above it.
 
+**Live: with the bits cleared, the hull's shade lifts (confidence 80).** On the port, on Modesto's
+pole slot in a Time Trial, `scripts/wipeout-pc-replay-shadow-live.py` with `NOCAST=1` cleared the
+two bits on every record of the table at `*0x020084d0`. The count is the `u16` at `+0x38` of the
+model at `**0x02007fe0`, and the records are `0xe0` bytes. Modesto has 2,762 nodes and all 2,762
+had the bits. The hull's `shadow` is `A / (A + B)` of the two knockout states of
+[hull-tone.md](hull-tone.md), before and after, on five and four frames:
+
+| Box (1280x720) | `shadow` as shipped (R, G) | `shadow` with the bits cleared (R, G) |
+| --- | --- | --- |
+| spine `(610, 430)-(670, 465)` | `0.01, 0.02` | `0.27, 0.27` |
+| left fin `(460, 570)-(540, 630)` | `0.21, 0.13` | `0.53, 0.66` |
+| housing bay `(590, 490)-(690, 570)` | `0.08, 0.07` | `0.16, 0.15` |
+| track panel `(780, 390)-(880, 440)`, a control | `0.54, 0.54` | `0.50, 0.50` |
+
+With the lighting as shipped, the left fin's mean goes from `(0.092, 0.111, 0.129)` to
+`(0.175, 0.255, 0.242)`. So the game reads the bits in each frame, and the pieces that have them
+shade the hull. The term does not reach 1. The values are after the tone map, and the fin is at
+the top of the range in part. A second source of shade is not ruled out.
+
 Not read: what tests the two bits, which map those pieces are drawn into, and with which
-program. That the hull's `shadowMapSampler` reads that map is thus an inference (confidence 55).
+program.
 
 **`track_proximity_shadow` is in the executable and nothing uses it (confidence 70).** The shadow
 module's static initialiser `FUN_01670010` registers a depth-only pair by that name (`LEA` at

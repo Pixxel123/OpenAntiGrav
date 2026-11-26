@@ -109,8 +109,9 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      the spine reads `0.01`. The road's `S = 1` knockout moves that only to `0.12`. Ours' hull shadow takes `8 %` off
      the housing box under `--shadows original`, and nothing under `off`. `hull-tone.md`, "The shadow term, read by
      knockout". Read: the circuit loader marks each node as a caster onto craft unless it has `CastNoShipShadows` or a
-     refractive material (`track-shadow.md`, "The circuit's pieces cast onto craft"). Next: find what tests those
-     bits, the map those pieces are drawn into, and whether the hull's `shadowMapSampler` reads it.
+     refractive material (`track-shadow.md`, "The circuit's pieces cast onto craft"). Live, with those bits cleared the
+     spine's `shadow` on the pole slot goes from `0.01` to `0.27`. Next: find what tests the bits and the map those
+     pieces are drawn into, then build that pass for ours' hull.
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the
