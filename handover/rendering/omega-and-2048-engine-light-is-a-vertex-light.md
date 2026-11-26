@@ -1,8 +1,8 @@
 ---
 status: measure
 titles: [omega, 2048]
-updated: 2026-11-16
-summary: "Engine light, hull SH ambient and vertex colour wired; open: warm-pixel acceptance, N scale, housing sun term, reflection, Omega specular"
+updated: 2026-11-26
+summary: "Engine light, SH ambient, vertex colour wired; acceptance run: ours 2.5x the mean; open: range curve, N scale, sun term, reflection"
 size: S (30)
 difficulty: easy (60)
 ---
@@ -73,10 +73,11 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
 
 ## Next Steps
 
-1. Keep `EngineLightLaw` and the receivers as merged. Add the acceptance: render `omega/modesto-heights` at 60 consecutive ticks and run
-   `scripts/engine-light-warm-census.py` over them. Pass: the count spreads from the unlit count to
-   its maximum (the original: 10th to 90th percentile 368 to 12,458, median 2,700, mean 4,712,
-   unlit 447); a constant count means the range draw is not reaching the shader.
+1. **DONE 2026-11-26.** Ours was rendered at ticks 600 to 659 on the Modesto Heights grid.
+   `scripts/engine-light-warm-census.py` counted the frames. The count changes on every tick (933 to 25,369), so the range draw
+   reaches the shader. Ours' mean is 11,708 against the original's 4,712, and its median is 12,964 against 2,700.
+   Method, table and limits: `docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Ours over 60 consecutive ticks".
+   Not done: a render of ours with the light off, and a run with the compare-page profile's flags.
 2. Add a forced-range path for the test (the jitter's `d` fixed) and compare with the original's
    curve at `Radius + w`: 1.0 gives 3,275 warm pixels, 1.5 gives 9,245, 2.0 gives 13,182 (summed
    excess 106,450, 355,657 and 550,931). Ours' count should follow the curve; its excess is expected

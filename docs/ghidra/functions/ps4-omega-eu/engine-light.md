@@ -370,6 +370,45 @@ never in a grid table. Seen in passing once the field raced: a pair at one posit
 range 40 and `(20, 5, 0.5)` range 100 shrinking to 0 over half a second, and a `(0.21, 0.3, 1.0)`
 range 15. None was traced to its producer.
 
+## Ours over 60 consecutive ticks (2026-11-26)
+
+This is the acceptance that the live check asked for. One stored frame cannot judge a light that
+flickers, so ours is counted over 60 frames with the same census as the original.
+
+**Method.** The nightly release AppImage (`7ee758e`, the Steam Deck build) rendered ticks 600 to 659
+on a Steam Deck (RADV), with no window. The source was the unpacked `CUSA07671` archives, not the
+`CUSA05670` copy that this page reads. The craft is at rest on the Modesto Heights grid after the
+field has left:
+
+```sh
+oag-game <source> --race --mode single_race --class venom --team FEISAR_C1 \
+    --track 'Data\environments\modesto_heights\track.vex' --ticks <N> \
+    --no-audio --size 1920x1080 --screenshot ours-<N>.png
+python3 scripts/engine-light-warm-census.py 'ours-*.png'
+```
+
+The graphics flags are the defaults of the game. The compare-page profile was not available, so
+they are not its flags.
+
+| Frames | n | Warm pixels: mean | median | 10th to 90th percentile | min | max | over 1,500 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| original, shipped, boot 2 (above) | 60 | 4,712 | 2,700 | 368 to 12,458 | | 16,232 | 37 |
+| ours, ticks 600 to 659 | 60 | 11,708 | 12,964 | 1,428 to 19,838 | 933 | 25,369 | 53 |
+
+Ours' summed `R - max(G, B)` has a mean of 548,158 per frame.
+
+**The range draw reaches the shader.** Ours' count changes on every tick, from 933 to 25,369. A
+constant count was the failure that this test looks for, and it did not occur.
+
+**Ours is brighter, by about 2.5 times in the mean.** The mean count is 2.5 times the original's and
+the maximum is 1.6 times. Ours' seven lowest frames count 933 to 1,429, against the original's 447
+with the producer off. Ours was not rendered with the light off in this run. The lowest frames
+are a stand-in for the unlit count and not a measurement of it. The factor of two at the low end
+agrees with the unlit hull excess that [hull-tone.md](hull-tone.md) decomposes. This run does not
+separate the hull's tone from the light's law.
+
+**Cross-title.** 2048 was not checked: no 2048 package was on the machine that made this run.
+
 ## Names
 
 | Address | Name | Confidence | Evidence |
