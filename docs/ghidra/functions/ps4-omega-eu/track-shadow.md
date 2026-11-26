@@ -107,8 +107,27 @@ With the lighting as shipped, the left fin's mean goes from `(0.092, 0.111, 0.12
 shade the hull. The term does not reach 1. The values are after the tone map, and the fin is at
 the top of the range in part. A second source of shade is not ruled out.
 
-Not read: what tests the two bits, which map those pieces are drawn into, and with which
-program.
+**What tests the bits: a pass for each model instance in `Scene_PrepareFrame` (confidence 65).**
+In 1.07 `FUN_015f2d30`, inside the loop over the model instance records (`0x01edf3e0`, `0x360`
+bytes each):
+
+1. `FUN_01669e20(3, 0x020e3a80, i, 0)` at `0x015fb15e`. The read is that it selects target `i` of
+   a set at `0x020e3a80`. The function was not read.
+2. `FUN_0165a210(2, circuit model, 0x020e39d0 + 16 * i, record + 0xa0, ...)` at `0x015fb1d6`
+   returns a count of circuit nodes. Their indices are the `u16` list at `0x0201ec00`. The third
+   argument is a 16-byte entry for the instance and the fourth is the instance's matrix. The read
+   is that this is a query for the nodes near the instance.
+3. The mask is `0x4000` (`0x015fb1e3`), or `0x2000` (`0x015fb1eb`) if the byte at `*0x01ed4950` is
+   not 0. That byte is the result of a compare of two floats of the lighting block
+   (`0x01eb2a64 < 0x01eb2da4`), written earlier in the same function. The two floats are not
+   named.
+4. A node is drawn if its word has the mask bit, does not have bit `0x20`, and its type byte
+   (`+0xb`) is 1. One draw is queued for each of the node's parts.
+5. `FUN_016292d0(instance, queue, 2)` then queues the instance's own model.
+
+So the map of one craft holds the circuit pieces near it and the craft, and both shade its hull.
+This is the same shape as the 2048 read below. The matrices of the pass come from a block for
+each instance at `0x020e3550`. Their law, the size of the map and its program were not read.
 
 **`track_proximity_shadow` is in the executable and nothing uses it (confidence 70).** The shadow
 module's static initialiser `FUN_01670010` registers a depth-only pair by that name (`LEA` at
@@ -125,8 +144,9 @@ loader has the two tags was not checked: no 2048 executable was on the machine t
 
 ## Open
 
-- What tests bits `0x6000` of a circuit node's `+0xa0`: the draw of those pieces, its map and its program, and whether
-  the hull's `shadowMapSampler` reads that map.
+- The pass for each model instance at `0x015fb15e`: the law of its matrices (`0x020e3550`), the query `FUN_0165a210`,
+  the size and the program of the map, and the bind that gives it to the hull's `shadowMapSampler`.
+- The two floats that choose between bits `0x2000` and `0x4000` (`0x01eb2a64`, `0x01eb2da4`).
 
 - Which models set bit 1 of `+0x110`, and what the second caster list (`*0x020e4268`) holds.
 - The `pcf` taps and the cascade selection inside the receiver (`@0xa764`'s `@0x7b8`-`@0x964` per
