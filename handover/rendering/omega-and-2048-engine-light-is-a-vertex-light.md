@@ -113,7 +113,8 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      spine's `shadow` on the pole slot goes from `0.01` to `0.27`. The pass is found: for each model instance,
      `Scene_PrepareFrame` queues the marked nodes near it and the instance's own model (1.07 `0x015fb15e`). Its map
      is read live: orthographic along the sun, 512 by 512, about 10 by 9.5 units fitted to the craft, 377 units deep
-     with the far plane at the craft. Next: the fit, the program and the hull's bind, then build it for ours' hull.
+     with the far plane at the craft. The wiring has its own thread,
+     [omega-hull-receives-the-shade-of-the-circuit.md](omega-hull-receives-the-shade-of-the-circuit.md).
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the

@@ -163,6 +163,28 @@ slot 8 with eight craft.
   compare read `-50.0` (`0x01eb2a64`) and `200.69` (`0x01eb2da4`). The second is equal to
   `shadowCoeffs`' `c0` in the same frame.
 
+**The hull's lookup, read off its program (confidence 70).** `gcn_dump` of
+`data/materials/ships/diffuse_with_specular_from_alpha_n_vcol.rcsmaterial` in `data08.psarc`, the
+pixel program at `0x7c44`, the one that [hull-tone.md](hull-tone.md) reads:
+
+- The coordinates come in as one interpolant, `attr0`. The program divides `x` and `y` by
+  `max(0.01, w)` and adds `0.5` (`@1e8`-`@218`).
+- It multiplies them by `shadowCoeffs[0]` and `[1]`, subtracts `0.5`, and takes the floor and the
+  fraction (`@204`-`@240`). Those two constants are thus the size of the map in texels.
+- It reads the map with four `image_gather4_c_lz_o` (`@2e4`, `@2ec`, `@304`, `@30c`): a compare of
+  depth, four texels each, at four offsets. The sixteen results give nine taps, each `1 / 9`
+  (`@3fc`).
+- The depth that it compares has a bias. One part follows the slope of the surface: the program
+  builds it from products of the coordinates with `shadowCoeffs[2]`, `[3]` and `[7]`, a reciprocal
+  and `shadowCoeffs[8]` (`@1bc`-`@2b0`). The other part is the constant `shadowCoeffs[9]`
+  (`@2b4`-`@2f8`).
+- It does not read `shadowCoeffs[12]` to `[15]`, the row that the road's exponential term uses.
+  So the road's `S = 1` knockout cannot release the hull, which is what the live read found.
+
+The hull's `shadowCoeffs` cannot be the frame's block. That block's first row read
+`(0.1309, 1.0, -0.0755, 1.0)` on Modesto, and a map size in texels is not `0.13`. The hull's draw
+thus has a block of its own under the same name (confidence 60). Its values were not read.
+
 **`track_proximity_shadow` is in the executable and nothing uses it (confidence 70).** The shadow
 module's static initialiser `FUN_01670010` registers a depth-only pair by that name (`LEA` at
 `0x01670239` and `0x016702bd`). The programs are at `0x019c97e0` and `0x019c96f0`. A scan of the
@@ -181,6 +203,8 @@ loader has the two tags was not checked: no 2048 executable was on the machine t
 - The pass for each model instance at `0x015fb15e`: the fit of its box and its first two axes to the craft, the query
   `FUN_0165a210`, the program of the map, and the bind that gives it to the hull's `shadowMapSampler`.
 - Whether circuit nodes are queued for every instance or for the first alone.
+- The values of the hull draw's own `shadowCoeffs` (the size of the map, the three bias terms), and the vertex program's
+  matrix for `attr0`.
 - The two floats that choose between bits `0x2000` and `0x4000` (`0x01eb2a64`, `0x01eb2da4`).
 
 - Which models set bit 1 of `+0x110`, and what the second caster list (`*0x020e4268`) holds.
