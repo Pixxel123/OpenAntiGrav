@@ -69,7 +69,45 @@ What this settles:
 cascades out to 254.9 and has neither of 2048's debug gates. The receiver's form (a map term on the sun) is the shared lineage;
 the axis, the fit and the encoding differ.
 
+## The circuit's pieces cast onto craft: `CastShipShadows` (2026-11-26)
+
+Read in the 1.07 eboot for the hull's shade ([hull-tone.md](hull-tone.md), "The shadow term, read
+by knockout"). The addresses are the 1.07 program's.
+
+**Each node of a circuit model is marked as a caster onto craft unless it says otherwise
+(confidence 70).** The circuit loader `FUN_0162a390` does this for each node, at `0x0162e1e7`:
+
+1. It sets bits `0x6000` of the word at `+0xa0` of the node's record (`*pbVar |= 0x60` at `+0xa1`).
+2. If the node has the tag `CastShipShadows`, the bits stay.
+3. If not, and the node has the tag `CastNoShipShadows`, it clears the bits (`&= 0xffff9fff`).
+4. If the node has neither tag, it looks at the node's materials. A material that binds the
+   parameter with the hash `0x88a0df95` clears the bits. That hash is
+   `~crc32("screenSpaceRefractionTex")`, found by a search of the executable's own strings.
+
+So the default is that a piece of the circuit casts a shadow onto a craft, and a refractive piece
+does not. This agrees with the hull read: on Modesto's pole slot the top of the hull gets no sun,
+and no craft is above it.
+
+Not read: what tests the two bits, which map those pieces are drawn into, and with which
+program. That the hull's `shadowMapSampler` reads that map is thus an inference (confidence 55).
+
+**`track_proximity_shadow` is in the executable and nothing uses it (confidence 70).** The shadow
+module's static initialiser `FUN_01670010` registers a depth-only pair by that name (`LEA` at
+`0x01670239` and `0x016702bd`). The programs are at `0x019c97e0` and `0x019c96f0`. A scan of the
+text segment for an instruction that addresses either descriptor, or any member of the module
+above `0x020e51d8`, finds the initialiser alone. The names are not compared against anywhere else.
+The pair is thus not the caster program on Omega.
+
+**2048: checked, differs in what is read.** 2048 ships the pair by the same names
+([`docs/formats/gxp.md`](../../../formats/gxp.md)). In the 2048 read, track pieces beside the
+craft are drawn from the sun into a map of the craft's own
+([`docs/rendering/shadows.md`](../../../rendering/shadows.md), confidence 62 there). Whether 2048's
+loader has the two tags was not checked: no 2048 executable was on the machine that made this read.
+
 ## Open
+
+- What tests bits `0x6000` of a circuit node's `+0xa0`: the draw of those pieces, its map and its program, and whether
+  the hull's `shadowMapSampler` reads that map.
 
 - Which models set bit 1 of `+0x110`, and what the second caster list (`*0x020e4268`) holds.
 - The `pcf` taps and the cascade selection inside the receiver (`@0xa764`'s `@0x7b8`-`@0x964` per
