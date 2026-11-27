@@ -613,10 +613,10 @@ impl Scene {
         // hull's (`race::engine_light`, "The circuit's switch").
         let ship_scene = mesh_render::Scene {
             zone: mesh_render::Zone::default(),
-            light,
-            spu_lights: mesh_render::SpuLights::from_slice(
+            light: crate::sh_probes::hull_light(light),
+            spu_lights: crate::sh_probes::hull_spu_lights(mesh_render::SpuLights::from_slice(
                 &self.with_detonator_lights(race.hd_craft_spu_lights(), race),
-            ),
+            )),
             ..scene
         };
         let weapon_scene = Self::weapon_scene(&scene);

@@ -17,6 +17,73 @@ use oag_gpu::writes::Writes;
 use oag_mesh::mesh_render::{SH_PROBE_BYTES, SH_PROBE_ROW, SH_PROBE_ROWS};
 use oag_vex::shprobes::{ShProbes, Taps};
 
+/// The two states of `OAG_DEBUG_HULL_SHADE_STATE`, the read lane's knockouts of the hull's shadow
+/// term (`docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout"):
+/// the sun colour at 0 and one ambient scale at 4, the other at 0. A leaves `K 4, Ks 0`, so the
+/// hull draws `4 * shadow * SH`; B leaves `K 0, Ks 4`, so it draws `4 * (1 - shadow) * SH`.
+/// The engine light stays off in both, as in the original's run, so no light is added to the sum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HullShadeState {
+    A,
+    B,
+}
+
+impl HullShadeState {
+    /// The hull's `(K, Ks)` in this state.
+    fn weights(self) -> (f32, f32) {
+        match self {
+            Self::A => (4.0, 0.0),
+            Self::B => (0.0, 4.0),
+        }
+    }
+}
+
+/// The state `OAG_DEBUG_HULL_SHADE_STATE` names, read once. Unset, or any other text, is none and
+/// leaves the hull alone.
+fn hull_shade_state() -> Option<HullShadeState> {
+    static STATE: std::sync::OnceLock<Option<HullShadeState>> = std::sync::OnceLock::new();
+    *STATE.get_or_init(|| parse_hull_shade_state(std::env::var("OAG_DEBUG_HULL_SHADE_STATE").ok()))
+}
+
+/// The value of `OAG_DEBUG_HULL_SHADE_STATE` as a state: `a` or `b`, as typed or trimmed.
+fn parse_hull_shade_state(value: Option<String>) -> Option<HullShadeState> {
+    match value?.trim() {
+        "a" => Some(HullShadeState::A),
+        "b" => Some(HullShadeState::B),
+        _ => None,
+    }
+}
+
+/// The light a craft's hull is drawn with: `light` itself, or with the sun colour at 0 where
+/// `OAG_DEBUG_HULL_SHADE_STATE` names a state. The circuit's own scene block keeps its light; the
+/// zeroed light reaches every block built from the hull's scene, the Shine block (which also
+/// draws the circuit's shine passes) included.
+#[must_use]
+pub(crate) fn hull_light(light: oag_mesh::mesh_render::Light) -> oag_mesh::mesh_render::Light {
+    if hull_shade_state().is_some() {
+        oag_mesh::mesh_render::Light {
+            sun: [0.0; 3],
+            ..light
+        }
+    } else {
+        light
+    }
+}
+
+/// The SPU lights a craft's hull is drawn with: `lights` itself, or none where
+/// `OAG_DEBUG_HULL_SHADE_STATE` names a state. The original's run had the engine light off, and an
+/// added light in both states would pull their ratio toward one half.
+#[must_use]
+pub(crate) fn hull_spu_lights(
+    lights: oag_mesh::mesh_render::SpuLights,
+) -> oag_mesh::mesh_render::SpuLights {
+    if hull_shade_state().is_some() {
+        oag_mesh::mesh_render::SpuLights::none()
+    } else {
+        lights
+    }
+}
+
 /// A circuit's probes and the two weights its `.envsettings` authors.
 #[derive(Debug, Clone)]
 pub struct HullSh {
@@ -48,7 +115,8 @@ impl HullSh {
         {
             texel[..3].copy_from_slice(rgb);
         }
-        row[(TEXELS - 1) * 4..].copy_from_slice(&[self.k, self.ks, 1.0, 0.0]);
+        let (k, ks) = hull_shade_state().map_or((self.k, self.ks), HullShadeState::weights);
+        row[(TEXELS - 1) * 4..].copy_from_slice(&[k, ks, 1.0, 0.0]);
         row
     }
 }
@@ -101,5 +169,21 @@ impl ShAmbient {
             bytemuck::cast_slice(&row),
         );
         self.written.borrow_mut()[craft] = Some(taps);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hull_shade_state_parses_a_and_b_only() {
+        let parse = |text: &str| parse_hull_shade_state(Some(text.to_owned()));
+        assert_eq!(parse("a"), Some(HullShadeState::A));
+        assert_eq!(parse(" b "), Some(HullShadeState::B));
+        assert_eq!(parse("A"), None);
+        assert_eq!(parse("ab"), None);
+        assert_eq!(parse(""), None);
+        assert_eq!(parse_hull_shade_state(None), None);
     }
 }
