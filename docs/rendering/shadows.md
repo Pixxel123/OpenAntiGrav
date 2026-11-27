@@ -852,7 +852,10 @@ replaces HD's road mask times the craft's map for the hull on Omega. The numbers
 [track-shadow.md](../ghidra/functions/ps4-omega-eu/track-shadow.md), "Wired: Omega's hull takes the shade of the circuit".
 Chosen, not measured: the box (7 units each way) and the far plane 7 units past the craft. The original's far plane is at the
 craft, and its exact offset is unread. Also chosen, not measured: the no-cull cast, the rule that transparent draws do not cast,
-solid cutouts and the bias `0.0002`.
+solid cutouts and the bias `0.0002`. The craft casts with no face culling on this path too. That is chosen, not measured. With
+its front faces culled, ours' housing bay on slot 8 had less shade than the original's. With no culling, all five slot 8 boxes
+agree with the original ([track-shadow.md](../ghidra/functions/ps4-omega-eu/track-shadow.md), "The craft's own faces in the
+map").
 
 **What is still not built on Omega.** The road's `S` is not built: the road keeps the earlier path. The default stays
 `off`, so a player sees no change until the maintainer flips it. The `mapped` tier and every other title keep the earlier

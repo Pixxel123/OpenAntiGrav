@@ -2,7 +2,7 @@
 status: measure
 titles: [omega]
 updated: 2026-11-27
-summary: "Omega's hull shade is wired under original. Open: sunlit-panel term, slot 8 housing, fit rule, bias, default tier"
+summary: "Omega's hull shade is wired under original. Open: sunlit-panel term, fit rule, bias, default tier"
 categories: [rendering]
 ---
 
@@ -12,14 +12,10 @@ categories: [rendering]
 under `--shadows original` only. The values, the chosen constants and the measurement are in
 [track-shadow.md](../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md), "Wired: Omega's hull takes the shade of the
 circuit". On the pole slot the acceptance holds. On slot 8 the sunlit panels agree with the original once its leftover term is
-subtracted. The housing bay does not.
+subtracted. The housing bay agrees too, now that the craft casts into the map with no face culling.
 
 ## Open
 
-- The housing bay on slot 8 has less shade on ours. With the original's leftover term subtracted, the housing reads
-  0.08 to 0.10 on the original and 0.21 to 0.23 on ours. The spine box at the bay's top edge reads 0.47 to 0.54 against
-  0.86 to 0.89. The cause is not read. One candidate: ours draws the craft into the map with its front faces culled.
-  Try the craft with no culling on this path, then measure again.
 - The original's hull shows a term that follows neither `Sun color` nor `K` nor `Ks` (the nose reads `.33` with all
   three at 0). Ours has no such term. The hull's reflection is the candidate. Read what it is.
 - The fit of the box and of its first two axes to the craft is not read. Ours' 7 units each way is chosen, not measured.

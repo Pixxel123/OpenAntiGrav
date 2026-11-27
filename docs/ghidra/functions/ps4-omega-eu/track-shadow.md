@@ -213,6 +213,8 @@ work is in `Title::hull_shade`, `HullShade::CircuitAndSelf { reach: 377.0 }` on 
   original's box has half-extents of 5.29 by 4.64 on the pole slot and 5.03 by 4.78 on slot 8. The fit rule is unread.
 - The casters are the circuit's `draws` and `cutouts` in the craft's light column, then the craft. The circuit casts
   with no face culling. That is chosen, not measured.
+- The craft also casts with no face culling on this path. That is chosen, not measured. It is the variant that agrees
+  with the original on five slot 8 boxes ("The craft's own faces in the map" below).
 - Transparent circuit draws do not cast. This stands in for the refractive-material rule. It is chosen, not measured.
   Cutouts cast as solid. That is also chosen, not measured.
 - The hull reads the depth map alone, with no road mask. It takes nine compared taps, three by three, a texel apart.
@@ -308,6 +310,7 @@ screenshots from the state's `from` time to two seconds before its `to` time. Th
   0.54 on the original (R, G). Ours reads 0.86 to 0.89. So the original's shade in and above the bay
   covers more than ours'. The cause is not read. One candidate is the craft's own faces in the map.
   Ours draws the craft with its front faces culled. The original's caster program is unread.
+  "The craft's own faces in the map" below resolves these two boxes.
 - **What the term is stays unread.** It does not follow `Sun color`, `K` or `Ks`. The hull's
   reflection is the candidate.
 
@@ -317,6 +320,38 @@ The pole slot's left wing reads `0.31, 0.17, 0.11` on the original, from a grey 
 **Not checked.** 2048: not checkable: no 2048 package on the machine. HD and 2048 stay pixel-identical under `original`
 by construction, because their `hull_shade` keeps the earlier path. That was not measured: no HD image and no 2048
 package were on the machine.
+
+### The craft's own faces in the map (2026-11-27)
+
+This run tests the candidate above. Ours draws the craft into the circuit-shade map in three ways.
+
+The run is ours on the Steam Deck (RADV), release build, Modesto Heights, 1280x720, tick 600,
+`--shadows original`. The value is `shadow = A / (A + B)` on the two knockout states, as (R, G, B). The
+original's column is the one above, with its term D subtracted. The run used a temporary switch, which is
+not in the tree.
+
+| Slot 8 box | Original | Ours, craft front faces culled | Ours, craft not culled |
+| --- | --- | --- | --- |
+| housing (590,470,690,560) | 0.08, 0.10, 0.14 | 0.23, 0.22, 0.15 | 0.06, 0.06, 0.07 |
+| spine (610,410,670,450) | 0.47, 0.54, 0.92 | 0.87, 0.89, 0.93 | 0.53, 0.61, 0.89 |
+| nose (620,360,660,400) | 1.00, 0.99, 0.98 | 1, 1, 1 | 0.99, 0.98, 0.98 |
+| left wing (470,580,540,620) | 0.83, 0.97, 0.97 | 1, 1, 1 | 0.96, 0.99, 0.99 |
+| right wing (760,580,830,620) | 0.41, 0.38, 0.37 | 0.34, 0.27, 0.26 | 0.34, 0.27, 0.26 |
+
+The pole slot reads 0 on every box in all three ways. The third way culls the back faces. It reads the
+same as "not culled" within 0.01.
+
+- **With every face of the craft in the map, all five slot 8 boxes agree with the original.** The
+  confidence that the original's craft casts with its lit faces is 75. The housing, the spine and the
+  nose are within 0.07 on each channel. The wings are within 0.13. With front faces culled, the housing
+  and the spine are 0.12 to 0.40 away (R, G).
+- **The right wing does not change.** Both ways read 0.34, 0.27 and 0.26 there. Its remaining difference
+  is thus not from the craft's faces.
+- **Why the faces change the bay.** With its lit faces in the map, the hull's lit faces compare against
+  themselves through the receiver's bias. The walls of the housing bay then shade the bay.
+- **Ours now draws the craft with no face culling on this path.** The original's caster program is unread,
+  so this rule is chosen, not measured. Back-face culling reads the same within 0.01, and no measurement here
+  separates the two.
 
 ## Open
 
