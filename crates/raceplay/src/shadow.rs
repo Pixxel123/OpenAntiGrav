@@ -348,21 +348,22 @@ const CLASS_OCCLUDER: u32 = 0x3c3;
 pub fn assets(
     archives: &mut oag_assets::Archives,
     teams: &[String],
-    race: &oag_title::RaceDefaults,
+    title: &oag_title::Title,
     mode: oag_race::Mode,
     resolution: oag_display::display::ShadowResolution,
     report: &mut Vec<String>,
 ) -> Assets {
     Assets {
-        silhouettes: silhouettes(archives, teams, race, mode, report),
-        hulls: hulls(archives, teams, race, mode, report),
+        silhouettes: silhouettes(archives, teams, title.race, mode, report),
+        hulls: hulls(archives, teams, title.race, mode, report),
         resolution,
+        hull_shade: title.hull_shade,
     }
 }
 
-/// What a race's shadows are built from: what [`assets`] read off the craft, and how many
-/// texels the maps get.
-#[derive(Debug, Default)]
+/// What a race's shadows are built from: what [`assets`] read off the craft, how many
+/// texels the maps get, and how the craft's title shades a hull.
+#[derive(Debug)]
 pub struct Assets {
     /// One `blob` shadow silhouette per grid slot, slot 0 the player's: the disc's own where
     /// the source ships one (Wipeout HD's nine `ambient_shadow.gtf`) and a generated falloff
@@ -374,4 +375,20 @@ pub struct Assets {
     pub hulls: Vec<Option<Occluder>>,
     /// The player's `graphics.shadow_resolution` ([`crate::Options::shadow_resolution`]).
     pub resolution: oag_display::display::ShadowResolution,
+    /// How the hull takes the sun's shade under the `original` tier: the craft's title's
+    /// [`oag_title::Title::hull_shade`].
+    pub hull_shade: oag_title::shadow::HullShade,
+}
+
+impl Default for Assets {
+    /// No silhouettes and no hulls, at the default resolution, and the road mask times
+    /// the craft's own depth map as the default `HullShade`.
+    fn default() -> Self {
+        Self {
+            silhouettes: Vec::new(),
+            hulls: Vec::new(),
+            resolution: oag_display::display::ShadowResolution::default(),
+            hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
+        }
+    }
 }

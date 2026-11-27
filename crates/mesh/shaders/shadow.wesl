@@ -233,7 +233,14 @@ const SELF_SHADOW_BIAS: f32 = 0.001;
 // under the `original` tier on a title that renders these maps - **and that
 // early return is the whole of every other title's inertness**: nothing
 // below it runs for a draw that names none.
+//
+// **A negative `sun_occlusion_layer` names a layer read by its depth map
+// alone**, `-(layer + 1)`: `circuit_shade` below, for a title whose map holds
+// the circuit's pieces and the craft in one depth map and draws no colour mask.
 fn sun_occlusion(world: vec3<f32>) -> f32 {
+    if uniforms.sun_occlusion_layer < -0.5 {
+        return circuit_shade(world, i32(-uniforms.sun_occlusion_layer + 0.5) - 1);
+    }
     let layer = i32(uniforms.sun_occlusion_layer + 0.5) - 1;
     if layer < 0 {
         return 1.0;
@@ -268,6 +275,49 @@ fn sun_occlusion(world: vec3<f32>) -> f32 {
         lit = lit + select(0.0, 1.0, ndc.z - SELF_SHADOW_BIAS <= nearest);
     }
     return occlusion * lit * 0.25;
+}
+
+// How far a hull is pushed towards the sun before its depth is compared
+// against a `circuit_shade` map, in that map's `0..1` units. The map's depth
+// is the caller's reach plus the box's 7 units past the craft
+// (`oag_render::shadow::map::CIRCUIT_SHADE_HALF_EXTENT`), 384 units at
+// Omega's reach of 377, so this is about 0.08 of a unit, against the 0.14 of
+// `SELF_SHADOW_BIAS` over its 140-unit box. **Chosen, not measured**: the
+// original's slope and constant bias terms (`shadowCoeffs[2]`, `[3]`, `[7]`,
+// `[8]` and `[9]`) are unread.
+const CIRCUIT_SHADE_BIAS: f32 = 0.0002;
+
+// How much sun reaches this point of a hull whose layer holds the circuit's
+// pieces near the craft and the craft in one depth map, `0.0` to `1.0`: nine
+// compared taps a texel apart, on a three-by-three grid centred on the point,
+// and their mean. These nine single compared taps stand in for the original's
+// four `image_gather4_c_lz_o`, whose sixteen results give nine taps of `1 / 9`
+// each (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "The hull's
+// lookup, read off its program").
+//
+// Off the box's sides the clamped edge texel is read; past the far plane a
+// point reads fully shaded. Neither arises for a hull inside the box.
+//
+// **The colour mask is not read**: such a layer draws none, so
+// `sun_occlusion_tex` holds whatever an earlier frame left in it. The matrix
+// and the depth map are the layer's own, the ones `sun_occlusion`'s
+// self-shadow tap reads.
+fn circuit_shade(world: vec3<f32>, layer: i32) -> f32 {
+    let clip = scene.sun_occlusion[layer] * vec4<f32>(world, 1.0);
+    if clip.w <= 0.0 {
+        return 1.0;
+    }
+    let ndc = clip.xyz / clip.w;
+    // The same `0.5 - ndc.y * 0.5` flip `shadow_coverage` documents.
+    let uv = vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+    let texel = 1.0 / f32(textureDimensions(self_shadow_tex).x);
+    var lit = 0.0;
+    for (var i = 0; i < 9; i = i + 1) {
+        let offset = vec2<f32>(f32(i % 3) - 1.0, f32(i / 3) - 1.0) * texel;
+        let nearest = textureSampleLevel(self_shadow_tex, shadow_depth_sampler, uv + offset, layer, 0);
+        lit = lit + select(0.0, 1.0, ndc.z - CIRCUIT_SHADE_BIAS <= nearest);
+    }
+    return lit / 9.0;
 }
 
 // The shadow term.

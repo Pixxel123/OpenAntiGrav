@@ -1,8 +1,8 @@
 ---
 status: measure
 titles: [omega, 2048]
-updated: 2026-11-16
-summary: "Engine light, hull SH ambient and vertex colour wired; open: warm-pixel acceptance, N scale, housing sun term, reflection, Omega specular"
+updated: 2026-11-27
+summary: "Engine light follows the range curve; hull shade is cast by circuit pieces (CastShipShadows default); open: that draw and map, N scale, reflection"
 size: S (30)
 difficulty: easy (60)
 ---
@@ -73,14 +73,16 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
 
 ## Next Steps
 
-1. Keep `EngineLightLaw` and the receivers as merged. Add the acceptance: render `omega/modesto-heights` at 60 consecutive ticks and run
-   `scripts/engine-light-warm-census.py` over them. Pass: the count spreads from the unlit count to
-   its maximum (the original: 10th to 90th percentile 368 to 12,458, median 2,700, mean 4,712,
-   unlit 447); a constant count means the range draw is not reaching the shader.
-2. Add a forced-range path for the test (the jitter's `d` fixed) and compare with the original's
-   curve at `Radius + w`: 1.0 gives 3,275 warm pixels, 1.5 gives 9,245, 2.0 gives 13,182 (summed
-   excess 106,450, 355,657 and 550,931). Ours' count should follow the curve; its excess is expected
-   to run high by the hull's own over-brightness until the hull tone is fixed.
+1. **DONE 2026-11-26.** Ours was rendered at ticks 600 to 659 on the Modesto Heights grid.
+   `scripts/engine-light-warm-census.py` counted the frames. The count changes on every tick (933 to 25,369), so the range draw
+   reaches the shader. Ours' mean is 11,708 against the original's 4,712, and its median is 12,964 against 2,700.
+   Method, table and limits: `docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Ours over 60 consecutive ticks".
+   Not done: a render of ours with the light off, and a run with the compare-page profile's flags.
+2. **DONE 2026-11-26.** `OAG_DEBUG_ENGINE_LIGHT_D` pins the range wander. Ours follows the original's curve
+   at nine ranges. Ours' unlit excess is 2.0 times the original's. Net of that, the light's share is 1.8 to 2.1
+   times from range 1.25 to 2.0 and 2.7 to 3.6 times from 0.5 to 1.0. Table:
+   `docs/ghidra/functions/ps4-omega-eu/engine-light.md`, "Ours at a forced range". Open from it: why the
+   factor is larger at small ranges (the normal's scale and the position wander are not measured).
 3. **Hull tone. The two reads are made (2026-11-16, `hull-tone-re`); the ambient and the vertex colour are wired, one read is owed.**
    Evidence, program and numbers: `docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The bound constants".
    - **Wired (2026-11-16, `hull-sh-ambient`): the ambient.** `oag_vex::shprobes` reads `track.shprobes`;
@@ -102,6 +104,22 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      ambient:** ours' ambient is still `1.4` to `2.1` times the original's (alone) and `1.9` to `2.7` times by the increment,
      the same order as the sun term, so the albedo (texel times vertex colour) or the lit normal may carry the whole
      excess: redo Read 2 with those numbers (`hull-tone.md`, "Wired").
+   - **Read 2026-11-26: the original's hull `shadow` follows the shade of the circuit, not the hull alone.** On
+     Modesto's slot 8 the housing bay reads `0.10` and the spine `0.36` to `0.42`. On the pole slot, in the shade,
+     the spine reads `0.01`. The road's `S = 1` knockout moves that only to `0.12`. Ours' hull shadow takes `8 %` off
+     the housing box under `--shadows original`, and nothing under `off`. `hull-tone.md`, "The shadow term, read by
+     knockout". Read: the circuit loader marks each node as a caster onto craft unless it has `CastNoShipShadows` or a
+     refractive material (`track-shadow.md`, "The circuit's pieces cast onto craft"). Live, with those bits cleared the
+     spine's `shadow` on the pole slot goes from `0.01` to `0.27`. The pass is found: for each model instance,
+     `Scene_PrepareFrame` queues the marked nodes near it and the instance's own model (1.07 `0x015fb15e`). Its map
+     is read live: orthographic along the sun, 512 by 512, about 10 by 9.5 units fitted to the craft, 377 units deep
+     with the far plane at the craft. The wiring has its own thread,
+     [omega-hull-receives-the-shade-of-the-circuit.md](omega-hull-receives-the-shade-of-the-circuit.md).
+     **Wired 2026-11-27 (lane `hull-shadow-wire`), under `--shadows original`.** The census redone on ours
+     (`D = -1.0`, `FEISAR_C1`, 1920x1080, ticks 600 to 603): the unlit count went from 910 to 299 and the excess from
+     49,108 to 17,108. The run that gave 910 and 49,108 used `--shadows off`. `original` already ran HD's two maps on
+     Omega before this change. So the fall compares `off` with the new `original`, and it is not the effect of the
+     wiring alone. The original's are 496 and 25,120. Ours is now under the original's count. What remains open is the reflection and the sunlit-panel term, in that thread.
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the

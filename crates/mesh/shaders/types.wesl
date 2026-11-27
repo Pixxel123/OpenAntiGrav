@@ -4,10 +4,13 @@ struct Uniforms {
     view_projection: mat4x4<f32>,
     model: mat4x4<f32>,
     // Which layer of the per-craft sun-occlusion array this model samples,
-    // **plus one** - `0.0` for none, which is every draw but a Wipeout HD hull
-    // under the `original` tier. See `sun_occlusion` below and
-    // `oag_render::shadow::occlusion`. It sits in this slot to keep the
-    // layout `UNIFORMS_SIZE` and four other pipelines mirror.
+    // **plus one** - `0.0` for none, which is every draw but a craft's hull
+    // under `original` or `mapped` on a title whose hull reads the map.
+    // **Negative, `-(layer + 1)`, names a layer read by its depth map alone**
+    // with nine compared taps (`circuit_shade` in `shadow.wesl`). See
+    // `sun_occlusion` below and `oag_render::shadow::occlusion`. It sits in
+    // this slot to keep the layout `UNIFORMS_SIZE` and four other pipelines
+    // mirror.
     //
     // Three trailing f32 fields rather than a vec3: WGSL aligns vec3 to 16
     // bytes, which would silently insert padding this struct's Rust mirror

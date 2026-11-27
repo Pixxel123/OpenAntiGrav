@@ -140,7 +140,7 @@ pub fn load_view(sim: SimLoad, options: &Options) -> Result<Loaded> {
     let shadows = super::shadow::assets(
         craft_of(&mut craft, &mut archives),
         slot_teams,
-        craft_title.race,
+        craft_title,
         options.mode,
         options.shadow_resolution,
         &mut report,

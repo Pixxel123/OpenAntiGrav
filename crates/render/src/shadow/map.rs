@@ -157,6 +157,17 @@ impl Resolution {
 /// the box to the ship's own bbox with none.
 pub const CRAFT_HALF_EXTENT: f32 = 12.0;
 
+/// Half the side of the box Omega's circuit-shade map is fitted to across the
+/// sun, in world units.
+///
+/// **Chosen, not measured.** The original's box, read live, is about 5.3 by 4.7
+/// half-extents and follows the craft
+/// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
+/// "The map of an instance, read live"); how it fits its two axes to the craft
+/// is unread. 7 covers the measured half-extents; at the worst rotation about
+/// the light's axis the measured box's corners reach 7.04.
+pub const CIRCUIT_SHADE_HALF_EXTENT: f32 = 7.0;
+
 /// The radius of the sphere around a craft outside which the receiver skips its
 /// map without projecting, in world units. **Not a new bound**: it encloses the
 /// receiver's slab (50 units past the craft along the sun, the box's 12-unit
@@ -292,6 +303,37 @@ impl Fit {
         // is wgpu's: depth runs 0 to 1, and `mesh`'s shader's own `ndc.z` test
         // assumes it.
         let projection = camera::orthographic(-radius, radius, -radius, radius, 0.0, reach * 2.0);
+        projection * view
+    }
+
+    /// [`Self::matrix_reaching`] with unequal depth: the near plane (clip z 0)
+    /// sits `towards` units up the light from [`Self::centre`] and the far
+    /// plane (clip z 1) `away` units past it. The box across the light and its
+    /// basis are the same as [`Self::matrix_reaching`]'s. `towards` is clamped
+    /// to at least 1 and `away` to at least 0.
+    ///
+    /// For a map that must see casters far towards the sun while spending
+    /// little depth behind the receiver.
+    #[must_use]
+    pub fn matrix_spanning(&self, towards: f32, away: f32) -> Mat4 {
+        let radius = self.radius.max(1.0);
+        let towards = towards.max(1.0);
+        let direction = self.resolved_direction();
+        let eye = self.centre + direction * towards;
+        let up = if direction.y.abs() > 0.99 {
+            Vec3::Z
+        } else {
+            Vec3::Y
+        };
+        let view = camera::look_at(eye, self.centre, up);
+        let projection = camera::orthographic(
+            -radius,
+            radius,
+            -radius,
+            radius,
+            0.0,
+            towards + away.max(0.0),
+        );
         projection * view
     }
 

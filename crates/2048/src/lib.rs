@@ -210,6 +210,9 @@ pub const TITLE: &Title = &Title {
     cursor: include_str!("../../../assets/cursors/2048.svg"),
     // The proximity and environment shadows are not built (`docs/rendering/shadows.md`).
     original_shadows: oag_title::shadow::OriginalShadows::Unbuilt,
+    // Not wired: `original` is unbuilt here, and the read of 2048's hull describes Omega's
+    // shape (`docs/rendering/shadows.md`, "2048's and Omega's `original`").
+    hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
     weather: oag_title::weather::Weather::Unplayed,
     water: oag_title::water::Water {
         // `fc15_effects_vscroll_water` draws its scrolled normal map and sun highlight under

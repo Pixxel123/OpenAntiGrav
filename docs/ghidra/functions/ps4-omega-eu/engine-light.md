@@ -370,6 +370,91 @@ never in a grid table. Seen in passing once the field raced: a pair at one posit
 range 40 and `(20, 5, 0.5)` range 100 shrinking to 0 over half a second, and a `(0.21, 0.3, 1.0)`
 range 15. None was traced to its producer.
 
+## Ours over 60 consecutive ticks (2026-11-26)
+
+This is the acceptance that the live check asked for. One stored frame cannot judge a light that
+flickers, so ours is counted over 60 frames with the same census as the original.
+
+**Method.** The nightly release AppImage (`7ee758e`, the Steam Deck build) rendered ticks 600 to 659
+on a Steam Deck (RADV), with no window. The source was the unpacked `CUSA07671` archives, not the
+`CUSA05670` copy that this page reads. The craft is at rest on the Modesto Heights grid after the
+field has left:
+
+```sh
+oag-game <source> --race --mode single_race --class venom --team FEISAR_C1 \
+    --track 'Data\environments\modesto_heights\track.vex' --ticks <N> \
+    --no-audio --size 1920x1080 --screenshot ours-<N>.png
+python3 scripts/engine-light-warm-census.py 'ours-*.png'
+```
+
+The graphics flags are the defaults of the game. The compare-page profile was not available, so
+they are not its flags.
+
+| Frames | n | Warm pixels: mean | median | 10th to 90th percentile | min | max | over 1,500 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| original, shipped, boot 2 (above) | 60 | 4,712 | 2,700 | 368 to 12,458 | | 16,232 | 37 |
+| ours, ticks 600 to 659 | 60 | 11,708 | 12,964 | 1,428 to 19,838 | 933 | 25,369 | 53 |
+
+Ours' summed `R - max(G, B)` has a mean of 548,158 per frame.
+
+**The range draw reaches the shader.** Ours' count changes on every tick, from 933 to 25,369. A
+constant count was the failure that this test looks for, and it did not occur.
+
+**Ours is brighter, by about 2.5 times in the mean.** The mean count is 2.5 times the original's and
+the maximum is 1.6 times. Ours' seven lowest frames count 933 to 1,429, against the original's 447
+with the producer off. Ours was not rendered with the light off in this run. The lowest frames
+are a stand-in for the unlit count and not a measurement of it. The factor of two at the low end
+agrees with the unlit hull excess that [hull-tone.md](hull-tone.md) decomposes. This run does not
+separate the hull's tone from the light's law.
+
+### Ours at a forced range
+
+`OAG_DEBUG_ENGINE_LIGHT_D` pins the range wander of every craft to one value
+(`crates/raceplay/src/engine_light.rs`). On Omega the range is then `Radius + D`, which is the
+quantity that the original's forced-range frames hold. A release build of this change rendered
+ticks 600 to 603 at each of nine values, with the method of the run above. The position wander
+stays live in ours, so the four frames of one range differ.
+
+With the variable not set, tick 600 of this build is the same as tick 600 of the nightly
+(20,119 pixels, excess 954,672).
+
+| Forced range | Original: warm pixels | Ours: warm pixels | Ratio | Original: summed excess | Ours: summed excess | Ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| none (`D = -1.0`) | 496 | 910 | 1.8 | 25,120 | 49,108 | 2.0 |
+| 0.25 | 454 | 919 | 2.0 | 22,901 | 49,384 | 2.2 |
+| 0.5 | 921 | 1,872 | 2.0 | 37,380 | 82,820 | 2.2 |
+| 0.75 | 1,707 | 4,740 | 2.8 | 63,696 | 189,164 | 3.0 |
+| 1.0 | 3,275 | 8,212 | 2.5 | 106,450 | 334,864 | 3.1 |
+| 1.25 | 7,672 | 12,012 | 1.6 | 287,589 | 533,641 | 1.9 |
+| 1.5 | 9,245 | 15,530 | 1.7 | 355,657 | 728,700 | 2.0 |
+| 1.75 | 12,548 | 18,398 | 1.5 | 519,447 | 905,148 | 1.7 |
+| 2.0 | 13,182 | 20,569 | 1.6 | 550,931 | 1,046,835 | 1.9 |
+
+Each value is the mean of four frames.
+
+**Ours follows the curve.** The count and the excess rise with the range at every step from 0.25,
+as the original's do. At a range of 0.01 or less ours submits no light, and the count at
+`D = -1.0` (910) is ours' unlit count.
+
+**Ours' unlit hull counts 1.8 times the original's, and its excess is 2.0 times.** This is the
+measurement that the 60-tick run did not have.
+
+**The light's own share is also high.** Subtract the unlit excess from each side. Ours is then
+1.8 to 2.1 times the original's from range 1.25 to 2.0. From 0.5 to 1.0 it is 2.7 to 3.6 times. A
+light that multiplies an over-bright hull gives a constant factor. The larger factor at small
+ranges is not explained by that. Two candidates are not measured: the scale of the normal that
+the original does not normalise, and the position wander (confidence 40 for each).
+
+**With the hull's circuit shade wired (2026-11-27).** This run rendered ours at `D = -1.0`, `FEISAR_C1`, 1920x1080, ticks 600
+to 603, with `--shadows original`. The warm pixels were 304, 281, 307 and 303 (mean 299). The summed excess was 17,391, 16,075,
+17,441 and 17,524 (mean 17,108). The "before" run used the same range with `--shadows off`. Ours' unlit count was 910 and its
+excess was 49,108. The original's are 496 and 25,120. `original` already ran HD's two maps on Omega before this change. So the
+fall compares `off` with the new `original`, and it is not the effect of the wiring alone. Ours' count went from 1.8 times the
+original's to 0.6 times. Its excess went from 2.0 times to 0.7 times. Both ratios come from the means above. Ours' count is now
+under the original's.
+
+**Cross-title.** 2048 was not checked: no 2048 package was on the machine that made this run.
+
 ## Names
 
 | Address | Name | Confidence | Evidence |

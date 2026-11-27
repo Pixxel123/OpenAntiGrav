@@ -10,13 +10,17 @@
 //! frame still renders. The first assertion below is that the caster reached
 //! the map at all.
 //!
+//! The second test draws the same layer as Omega's circuit shade: the circuit
+//! pieces in the light's column through the craft, and the craft with every
+//! face, into one depth map.
+//!
 //! Skips when there is no adapter, like `velocity_target.rs`.
 
 use oag_core::math::{Mat4, Vec3};
-use oag_mesh::mesh::GpuVertex;
+use oag_mesh::mesh::{Bounds, DrawCall, GpuVertex};
 use oag_mesh::mesh_render::OCCLUSION_LAYERS;
 use oag_mesh::mesh_render::material_bind_group_layout;
-use oag_render::shadow::map::{Caster, Fit};
+use oag_render::shadow::map::{CIRCUIT_SHADE_HALF_EXTENT, Caster, Fit};
 use oag_render::shadow::occlusion::{Maps, Track};
 use oag_render::shadow::self_shadow::SIZE;
 
@@ -86,6 +90,10 @@ fn project(matrix: Mat4, world: Vec3) -> (Vec3, usize) {
 /// `mesh.wgsl`'s `SELF_SHADOW_BIAS`, restated: the compare is
 /// `ndc.z - bias <= depth`.
 const BIAS: f32 = 0.001;
+
+/// `shadow.wesl`'s `CIRCUIT_SHADE_BIAS`, restated: the circuit-shade compare
+/// is `ndc.z - bias <= depth`.
+const CIRCUIT_SHADE_BIAS: f32 = 0.0002;
 
 #[test]
 fn a_wing_shadows_the_fuselage_under_it_and_the_rest_of_the_hull_is_lit() {
@@ -234,4 +242,200 @@ fn a_wing_shadows_the_fuselage_under_it_and_the_rest_of_the_hull_is_lit() {
     );
     assert_eq!(maps.self_shadow().drawn(2), 0);
     const { assert!(OCCLUSION_LAYERS > 2) };
+}
+
+/// Uploads `vertices` and `indices` as one whole geometry and its index buffer.
+fn upload(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    vertices: &[GpuVertex],
+    indices: &[u32],
+) -> (oag_mesh::mesh_render::Geometry, wgpu::Buffer) {
+    let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("caster vertices"),
+        size: std::mem::size_of_val(vertices) as u64,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    queue.write_buffer(&vertex_buffer, 0, bytemuck::cast_slice(vertices));
+    let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("caster indices"),
+        size: std::mem::size_of_val(indices) as u64,
+        usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    queue.write_buffer(&index_buffer, 0, bytemuck::cast_slice(indices));
+    (
+        oag_mesh::mesh_render::Geometry::single(vertex_buffer, vertices.len() as u32),
+        index_buffer,
+    )
+}
+
+/// A circuit piece: one single-sided quad, `half` to each side of `centre` in
+/// `x` and `z`, front-facing up the sun.
+fn piece(
+    vertices: &mut Vec<GpuVertex>,
+    indices: &mut Vec<u32>,
+    centre: Vec3,
+    half: f32,
+) -> DrawCall {
+    let start = indices.len() as u32;
+    face(vertices, indices, centre, Vec3::X * half, Vec3::Z * half);
+    DrawCall {
+        range: start..indices.len() as u32,
+        texture: None,
+        bounds: Bounds {
+            centre: centre.to_array(),
+            radius: half * std::f32::consts::SQRT_2,
+        },
+        moving: false,
+        culled: false,
+        blend: None,
+        blend_state: None,
+        depth_point: None,
+        layer: 0,
+        alpha_test_ref: None,
+        writes_depth: false,
+        node: None,
+        chunk: None,
+    }
+}
+
+#[test]
+fn circuit_shade_holds_a_deck_above_the_craft() {
+    let instance = wgpu::Instance::default();
+    let Some(adapter) = oag_gpu::test_adapter::request(&instance) else {
+        eprintln!("no GPU adapter: skipping");
+        return;
+    };
+    let (device, queue) =
+        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+            .expect("requesting the device");
+
+    let mut maps = Maps::new(&device, &material_bind_group_layout(&device));
+
+    // The craft: one slab three units thick, its top at local y = 0, placed
+    // two units up by its model, so its top is at world y = 2 and its
+    // underside at y = -1. The circuit has its own model, a different
+    // translation: a pass that drew both through one staged matrix, or
+    // dropped the circuit's model, would put a piece off its depth.
+    let mut vertices = Vec::new();
+    let mut indices = Vec::new();
+    slab(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(0.0, -1.5, 0.0),
+        Vec3::new(5.0, 1.5, 5.0),
+    );
+    let (craft_geometry, craft_indices) = upload(&device, &queue, &vertices, &indices);
+    let ranges = std::array::from_fn::<_, 1, _>(|_| 0..indices.len() as u32);
+    let craft_model = Mat4::from_translation(Vec3::new(0.0, 2.0, 0.0));
+    let caster = Caster {
+        geometry: &craft_geometry,
+        indices: &craft_indices,
+        ranges: &ranges,
+        model: craft_model,
+    };
+
+    // The circuit, every piece a single-sided quad facing the sun, which a
+    // front-face cull would drop. A deck 150 units up - past the 70 of
+    // `CRAFT_REACH` - over one half of the craft; a cutout piece over its
+    // front; a transparent one over its other half, which does not cast; and
+    // a deck far to the side, outside the light's column through the craft.
+    // The positions are world positions: each piece is built at the inverse
+    // of the circuit's model offset, which puts it back.
+    let circuit_offset = Vec3::new(0.5, 3.0, 0.0);
+    let mut vertices = Vec::new();
+    let mut indices = Vec::new();
+    let deck = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(-3.0, 150.0, 0.0) - circuit_offset,
+        2.0,
+    );
+    let far = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(40.0, 150.0, 0.0) - circuit_offset,
+        2.0,
+    );
+    let fence = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(0.0, 30.0, 4.0) - circuit_offset,
+        1.0,
+    );
+    let glass = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(3.0, 50.0, 0.0) - circuit_offset,
+        2.0,
+    );
+    let (circuit_geometry, circuit_indices) = upload(&device, &queue, &vertices, &indices);
+    let draws = [deck, far];
+    let cutouts = [fence];
+    let transparent = [glass];
+    let track = Track {
+        geometry: &circuit_geometry,
+        indices: &circuit_indices,
+        draws: &draws,
+        cutouts: &cutouts,
+        transparent: &transparent,
+        materials: &[],
+        model: Mat4::from_translation(circuit_offset),
+    };
+
+    let fit = Fit::craft(Vec3::new(0.0, 2.0, 0.0), Vec3::Y);
+    let reach = 377.0;
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    let drawn = maps.render_circuit_shade(&mut encoder, 2, &fit, reach, &track, &caster);
+    maps.write_uniforms(&queue);
+    queue.submit([encoder.finish()]);
+    assert_eq!(drawn, 3, "the deck, the fence and the craft's one range");
+    assert_eq!(maps.drawn(2), 3, "the layer is marked drawn");
+    assert_eq!(maps.self_shadow().drawn(2), 3);
+    let matrix = maps.matrix(2);
+    let expected = Fit {
+        radius: CIRCUIT_SHADE_HALF_EXTENT,
+        ..fit
+    }
+    .matrix_spanning(reach, CIRCUIT_SHADE_HALF_EXTENT);
+    assert_eq!(matrix, expected, "the receiver reads the map's own matrix");
+
+    let depth = maps.self_shadow().read_back(&device, &queue, 2);
+    let holds = |world: Vec3, label: &str| {
+        let (ndc, texel) = project(matrix, world);
+        assert!(
+            (depth[texel] - ndc.z).abs() < 1e-3,
+            "the map holds {label} {}, got {}",
+            ndc.z,
+            depth[texel]
+        );
+    };
+    // The receiver's compare, as `shadow.wesl` makes it on this path.
+    let shaded = |world: Vec3| {
+        let (ndc, texel) = project(matrix, world);
+        ndc.z - CIRCUIT_SHADE_BIAS > depth[texel]
+    };
+
+    holds(Vec3::new(-3.0, 150.0, 0.0), "the deck");
+    assert!(
+        shaded(Vec3::new(-3.0, 2.0, 0.0)),
+        "the craft's top under the deck"
+    );
+    holds(Vec3::new(0.0, 30.0, 4.0), "the fence");
+    assert!(
+        shaded(Vec3::new(0.0, 2.0, 4.0)),
+        "the craft's top under the fence"
+    );
+    // Under the glass the map holds the craft's own top, through the craft's
+    // model: the craft casts with every face, so a front-face cull, which
+    // leaves the underside at y = -1, fails here. The top compares lit
+    // against itself through the receiver's bias.
+    holds(Vec3::new(3.0, 2.0, 0.0), "the craft's top");
+    assert!(
+        !shaded(Vec3::new(3.0, 2.0, 0.0)),
+        "the craft's top under the glass"
+    );
+    assert_eq!(depth[0], 1.0, "the corner, where nothing casts, is far");
 }

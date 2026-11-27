@@ -306,6 +306,9 @@ pub struct Title {
     /// Whether this title's own `original` shadow tier is built, and so whether
     /// the shadow setting defaults to it. See [`shadow::OriginalShadows`].
     pub original_shadows: shadow::OriginalShadows,
+    /// How this title's hull takes the shade of what is between it and the sun.
+    /// See [`shadow::HullShade`].
+    pub hull_shade: shadow::HullShade,
     /// Whether a circuit's rain and snow are played, and so whether the weather
     /// setting is offered. See [`weather::Weather`].
     pub weather: weather::Weather,

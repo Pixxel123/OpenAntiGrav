@@ -775,7 +775,7 @@ impl Drawable {
         let uniforms = Uniforms {
             view_projection: view_projection.to_cols_array_2d(),
             model: model.to_cols_array_2d(),
-            sun_occlusion_layer: hull.sun_occlusion.map_or(0.0, |layer| layer as f32 + 1.0),
+            sun_occlusion_layer: hull.sun_occlusion,
             model_clock: clock,
             model_colour: colour,
             hull_scale: hull.scale,
@@ -1105,9 +1105,10 @@ pub(crate) fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct HullLayers {
     /// Which layer of the frame's per-craft sun-occlusion array the hull samples - a craft
-    /// under the `original` tier on Wipeout HD - or `None`, which is what every other
+    /// under `original` (on Wipeout HD or Omega) or `mapped` - as the uniform's word
+    /// (`Scene::sun_occlusion_layer`), or `0.0` for none, which is what every other
     /// drawable writes. See `oag_render::shadow::occlusion`.
-    pub(crate) sun_occlusion: Option<usize>,
+    pub(crate) sun_occlusion: f32,
     /// [`mesh_render::pack_hull_scale`]'s word for Pulse's hull lights, `0.0` for the default.
     pub(crate) scale: f32,
     /// [`mesh_render::HullPointLights::at`]'s slots for Pulse's hull lights, all zero for none.
@@ -1135,8 +1136,9 @@ pub(crate) struct Uniforms {
     view_projection: [[f32; 4]; 4],
     model: [[f32; 4]; 4],
     /// Which layer of the per-craft sun-occlusion array this model samples,
-    /// plus one; `0.0` for none - see `mesh_render`'s own mirror of this
-    /// layout and `oag_render::shadow::occlusion`.
+    /// plus one; `0.0` for none. Negative, `-(layer + 1)`, names a layer read
+    /// by its depth map alone - see `mesh_render`'s own mirror of this layout
+    /// and `oag_render::shadow::occlusion`.
     sun_occlusion_layer: f32,
     /// See `mesh_render`'s own mirror: the model's own animation clock.
     model_clock: f32,

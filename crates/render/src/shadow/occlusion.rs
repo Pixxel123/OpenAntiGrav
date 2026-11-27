@@ -50,10 +50,11 @@
 use oag_core::math::{Mat4, Vec3};
 
 use super::layer_uniforms::LayerUniforms;
-use super::map::{Caster, Fit};
+use super::map::{CIRCUIT_SHADE_HALF_EXTENT, Caster, Fit};
 use super::self_shadow;
 use oag_mesh::mesh::{DrawCall, GpuVertex};
 use oag_mesh::mesh_render::{OCCLUSION_FORMAT, OCCLUSION_LAYERS};
+use std::f32::consts::SQRT_2;
 
 /// Each layer's resolution, square.
 ///
@@ -385,8 +386,56 @@ impl Maps {
         self.self_shadow.render(encoder, layer, matrix, caster)
     }
 
-    /// Writes the matrices every [`Self::render`] and [`Self::render_self_shadow`] staged
-    /// since the last call: one write for each buffer, however many craft drew. Call it
+    /// Renders Omega's circuit-shade map into `layer`'s self-shadow depth map:
+    /// every opaque and cutout draw call of `track` that can reach the box
+    /// (`casts_circuit_shade`), and `caster`, through one matrix
+    /// ([`self_shadow::Maps::render_with_circuit`]). In place of
+    /// [`Self::render`] and [`Self::render_self_shadow`]: the colour mask is
+    /// not drawn, and the hull reads the depth map alone.
+    ///
+    /// Returns how many draws it made, and marks the layer drawn with that
+    /// count, so a hull names the layer by [`Self::drawn`].
+    ///
+    /// The box is [`CIRCUIT_SHADE_HALF_EXTENT`] across the sun, its near plane
+    /// `reach` units up the sun from the craft
+    /// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
+    /// "The map of an instance, read live": 377 on Modesto). **The far plane
+    /// [`CIRCUIT_SHADE_HALF_EXTENT`] past the craft is chosen, not measured**:
+    /// the original's far plane is at the craft, and its exact offset is
+    /// unread; the half-extent keeps the craft's own far side in the map.
+    pub fn render_circuit_shade(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        layer: usize,
+        fit: &Fit,
+        reach: f32,
+        track: &Track<'_>,
+        caster: &Caster<'_>,
+    ) -> usize {
+        if layer >= self.matrices.len() {
+            return 0;
+        }
+        let matrix = Fit {
+            radius: CIRCUIT_SHADE_HALF_EXTENT,
+            ..*fit
+        }
+        .matrix_spanning(reach, CIRCUIT_SHADE_HALF_EXTENT);
+        self.matrices[layer] = matrix;
+        let sun = fit.towards_light.normalize_or_zero();
+        let drawn = self.self_shadow.render_with_circuit(
+            encoder,
+            layer,
+            matrix,
+            track,
+            |draw| casts_circuit_shade(draw, fit.centre, sun),
+            caster,
+        );
+        self.drawn[layer] = drawn;
+        drawn
+    }
+
+    /// Writes the matrices every [`Self::render`], [`Self::render_self_shadow`] and
+    /// [`Self::render_circuit_shade`] staged since the last call: one write for each buffer, however many craft drew. Call it
     /// once the frame's layers are recorded and before their submission; a layer drawn
     /// without it reads the matrix of the last frame that wrote one.
     pub fn write_uniforms(&mut self, queue: &dyn oag_gpu::writes::Writes) {
@@ -540,6 +589,23 @@ pub fn within(draw: &DrawCall, centre: Vec3, sun: Vec3) -> bool {
     offset.cross(sun).length_squared() <= radius * radius + RADIUS * RADIUS
 }
 
+/// Whether `draw` casts into the circuit-shade map: it is not `moving`, and
+/// its bounding sphere comes within the box's half-diagonal across the sun
+/// (`CIRCUIT_SHADE_HALF_EXTENT * sqrt(2)`) of the line through `centre` along
+/// `sun`, `sun` a unit vector.
+///
+/// Not [`within`]: that test is HD's measured mask rule, and it drops a long
+/// piece whose end crosses the box while its centre sits off the line.
+/// **Chosen, not measured**: the original's own node query for this pass is
+/// unread, so this is a geometric cover of the box.
+fn casts_circuit_shade(draw: &DrawCall, centre: Vec3, sun: Vec3) -> bool {
+    if draw.moving {
+        return false;
+    }
+    let offset = Vec3::from_array(draw.bounds.centre) - centre;
+    offset.cross(sun).length() <= draw.bounds.radius + CIRCUIT_SHADE_HALF_EXTENT * SQRT_2
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -577,6 +643,29 @@ mod tests {
         assert!(!within(&draw([12.0, 4.0, 0.0], 2.0, false), craft, sun));
         // The same centre with a sphere big enough to reach: 144 <= 49 + 100.
         assert!(within(&draw([12.0, 4.0, 0.0], 7.0, false), craft, sun));
+    }
+
+    #[test]
+    fn a_long_piece_casts_into_the_circuit_shade_while_its_sphere_reaches_the_box() {
+        let craft = Vec3::ZERO;
+        let sun = Vec3::Y;
+        // The half-diagonal is 7 * sqrt(2) = 9.9, so a radius-100 sphere
+        // reaches the box out to 109.9 from the sun's line.
+        assert!(casts_circuit_shade(
+            &draw([105.0, 0.0, 0.0], 100.0, false),
+            craft,
+            sun
+        ));
+        assert!(!casts_circuit_shade(
+            &draw([111.0, 0.0, 0.0], 100.0, false),
+            craft,
+            sun
+        ));
+        assert!(!casts_circuit_shade(
+            &draw([0.0, 0.0, 0.0], 5.0, true),
+            craft,
+            sun
+        ));
     }
 
     #[test]

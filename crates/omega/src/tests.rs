@@ -250,3 +250,14 @@ fn omega_lets_the_player_turn_zoom_and_pan_its_craft() {
     assert_eq!(law.fov_per_zoom, -60.0);
     assert!(law.pan_scale[0] < 1.0, "Omega's pan stays inside its frame");
 }
+
+/// Omega's craft take the shade of the circuit's pieces in their light column and of the craft
+/// itself, 377 units toward the sun (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`,
+/// "The circuit's pieces cast onto craft").
+#[test]
+fn hull_shade_is_the_circuit_and_the_craft_at_377() {
+    assert_eq!(
+        TITLE.hull_shade,
+        oag_title::shadow::HullShade::CircuitAndSelf { reach: 377.0 }
+    );
+}

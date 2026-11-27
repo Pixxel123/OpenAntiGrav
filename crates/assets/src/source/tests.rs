@@ -288,6 +288,7 @@ const TITLE: &Title = &Title {
     music: None,
     cursor: "",
     original_shadows: oag_title::shadow::OriginalShadows::Unbuilt,
+    hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
     weather: oag_title::weather::Weather::Unplayed,
     water: oag_title::water::Water::NONE,
     rumble: oag_title::rumble::Rumble::Absent,

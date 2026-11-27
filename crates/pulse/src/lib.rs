@@ -109,6 +109,8 @@ pub const TITLE: &Title = &Title {
     cursor: include_str!("../../../assets/cursors/pulse.svg"),
     // Built 2026-09-04: the craft's own `Dynamic Shadow Occluder` hull, projected on the road.
     original_shadows: oag_title::shadow::OriginalShadows::Built,
+    // HD's law carried over, chosen, not measured.
+    hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
     // Read on the PSP (`weather.md`); the PS2 pressing plays the same law.
     weather: oag_title::weather::Weather::Played {
         // Fort Gale authors the rain (`<Weather EnvPsys="WO_RAIN">`, `ScreenPsys` the

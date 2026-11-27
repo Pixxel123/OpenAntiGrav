@@ -1,4 +1,5 @@
-//! Whether a title's own shadow mechanism is built, and so what its default is.
+//! Whether a title's own shadow mechanism is built, and so what its default is,
+//! and how a title's hull takes the sun's shade ([`HullShade`]).
 //!
 //! The `original` shadow tier draws what the title itself authors
 //! (`oag_display::display::Shadows::Original`). Which titles have anything to
@@ -30,4 +31,14 @@ impl OriginalShadows {
     pub const fn draws(self) -> bool {
         matches!(self, Self::Built)
     }
+}
+
+/// How a title's hull takes the shade of what is between it and the sun.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HullShade {
+    /// The craft's own depth map times the road's baked mask under it (Wipeout HD).
+    RoadMaskTimesSelf,
+    /// One depth map per craft that holds the circuit draws in the craft's light column
+    /// and the craft, `reach` units toward the sun (Omega).
+    CircuitAndSelf { reach: f32 },
 }

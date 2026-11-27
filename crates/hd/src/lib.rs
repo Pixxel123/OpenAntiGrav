@@ -225,6 +225,7 @@ pub const TITLE: &Title = &Title {
     cursor: include_str!("../../../assets/cursors/hd.svg"),
     // Built 2026-09-04: the craft render into a coverage map the track samples.
     original_shadows: oag_title::shadow::OriginalShadows::Built,
+    hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
     weather: oag_title::weather::Weather::Unplayed,
     // The sea's taps are drawn under `original` (`docs/rendering/water.md`).
     water: oag_title::water::Water {

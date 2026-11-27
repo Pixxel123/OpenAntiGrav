@@ -17,7 +17,9 @@ pub(super) struct Uniforms {
     view_projection: [[f32; 4]; 4],
     model: [[f32; 4]; 4],
     /// Which layer of the per-craft sun-occlusion array this model samples,
-    /// plus one - `0.0` for none. See `shaders/shadow.wesl`'s `sun_occlusion` and
+    /// plus one - `0.0` for none. Negative, `-(layer + 1)`, names a layer read
+    /// by its depth map alone, nine compared taps and no colour mask. See
+    /// `shaders/shadow.wesl`'s `sun_occlusion` and `circuit_shade`, and
     /// [`crate::shadow::occlusion`]. The layout `mesh.wesl`, four other
     /// pipelines and the asset viewer mirror is this size.
     sun_occlusion_layer: f32,

@@ -229,3 +229,12 @@ fn hd_has_the_craft_control_law_and_pulse_does_not() {
             .is_some_and(|f| f.ship_control.is_none())
     );
 }
+
+/// On HD a craft takes its own depth map times the road's baked mask under it.
+#[test]
+fn hull_shade_is_the_road_mask_times_the_craft() {
+    assert_eq!(
+        TITLE.hull_shade,
+        oag_title::shadow::HullShade::RoadMaskTimesSelf
+    );
+}
