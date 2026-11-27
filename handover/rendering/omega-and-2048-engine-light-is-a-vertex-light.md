@@ -1,7 +1,7 @@
 ---
 status: measure
 titles: [omega, 2048]
-updated: 2026-11-26
+updated: 2026-11-27
 summary: "Engine light follows the range curve; hull shade is cast by circuit pieces (CastShipShadows default); open: that draw and map, N scale, reflection"
 size: S (30)
 difficulty: easy (60)
@@ -115,6 +115,9 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      is read live: orthographic along the sun, 512 by 512, about 10 by 9.5 units fitted to the craft, 377 units deep
      with the far plane at the craft. The wiring has its own thread,
      [omega-hull-receives-the-shade-of-the-circuit.md](omega-hull-receives-the-shade-of-the-circuit.md).
+     **Wired 2026-11-27 (lane `hull-shadow-wire`), under `--shadows original`.** The census redone on ours
+     (`D = -1.0`, `FEISAR_C1`, 1920x1080, ticks 600 to 603): the unlit count went from 910 to 299 and the excess from
+     49,108 to 17,108. The original's are 496 and 25,120. Ours is now under the original's count. What remains open is the reflection and the sunlit-panel term, in that thread.
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the

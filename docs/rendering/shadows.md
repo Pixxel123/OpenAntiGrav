@@ -843,6 +843,19 @@ ours' settings file for every platform, so the adopted Omega pairs carry the cov
 pair. Building `original` on Omega properly means scoping the sun-occlusion pass off by title data (which **will** move the Omega
 pairs, the hull first) and reading the second caster list; until then the default stays `off`.
 
+**Omega's hull shade: built (2026-11-27, lane `hull-shadow-wire`).** `Title::hull_shade` on Omega is
+`HullShade::CircuitAndSelf { reach: 377.0 }`. Under `--shadows original` each craft's hull compares against a depth map
+of its own, with nine taps. The map holds the circuit's pieces near the craft and the craft. It is orthographic along the
+sun and reaches 377 units toward it. This replaces HD's road mask times the craft's map for the hull on Omega. The
+numbers, the chosen values and the open items are in
+[track-shadow.md](../ghidra/functions/ps4-omega-eu/track-shadow.md), "Wired: Omega's hull takes the shade of the circuit".
+Chosen, not measured: the box (7 units each way), the no-cull cast, the rule that transparent draws do not cast, solid
+cutouts and the bias `0.0002`.
+
+**What is still not built on Omega.** The road's `S` is not built: the road keeps the earlier path. The default stays
+`off`, so a player sees no change until the maintainer flips it. The `mapped` tier and every other title keep the earlier
+path. The compare page draws `original` on Omega, so the adopted Omega pairs move: the hull first.
+
 **2048: checked, differs.** 2048 casts along `Ship shadow direction` into one map out to 60 units; Omega along the sun into
 three exponential cascades out to 254.9.
 

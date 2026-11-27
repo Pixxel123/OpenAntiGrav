@@ -198,6 +198,74 @@ craft are drawn from the sun into a map of the craft's own
 ([`docs/rendering/shadows.md`](../../../rendering/shadows.md), confidence 62 there). Whether 2048's
 loader has the two tags was not checked: no 2048 executable was on the machine that made this read.
 
+## Wired: Omega's hull takes the shade of the circuit (2026-11-27, lane `hull-shadow-wire`)
+
+Ours now draws the per-craft map that the section above reads. The hull compares against it with nine taps. The
+work is in `Title::hull_shade`, `HullShade::CircuitAndSelf { reach: 377.0 }` on Omega, and in `oag_render::shadow`.
+
+**What the lane built.**
+
+- The map is orthographic along `Lighting.Sun direction`. `Fit::matrix_spanning` gives it a depth that runs unequally
+  either side of the craft. The far plane is at the craft and the map reaches 377 units toward the sun. This is the
+  original's law as read above.
+- The box is `CIRCUIT_SHADE_HALF_EXTENT = 7.0` units each way across the sun. This is chosen, not measured. The
+  original's box was 5.3 by 4.7 units on the pole slot. The fit rule is not read.
+- The casters are the circuit's `draws` and `cutouts` in the craft's light column, then the craft. The circuit casts
+  with no face culling. That is chosen, not measured.
+- Transparent circuit draws do not cast. This stands in for the refractive-material rule. It is chosen, not measured.
+  Cutouts cast as solid. That is also chosen, not measured.
+- The hull reads the depth map alone, with no road mask. It takes nine compared taps, three by three, a texel apart.
+  `CIRCUIT_SHADE_BIAS = 0.0002` of the map's depth is the bias. It is chosen, not measured. The original's bias terms are
+  in `shadowCoeffs`, and those values are not read.
+- It applies under `--shadows original` only. The `mapped` tier keeps the road mask and the craft. Every other title
+  keeps the earlier path.
+- The craft's title gives the `hull_shade`.
+- `OAG_DEBUG_HULL_SHADE_STATE=a` or `b` is the measuring switch. It renders the two knockout states of
+  [hull-tone.md](hull-tone.md), "The shadow term, read by knockout". It also turns the hull's engine and detonator lights
+  off, as the original's run had the engine light off.
+
+**Measured, ours against the original.** Ours is the branch's release build, stripped, on a Steam Deck (RADV), headless.
+It ran `--shadows original`, 1280x720, Modesto Heights, `--team FEISAR`, ticks 600 and 603, mean of 2 frames. The
+original's frames are the read lane's port frames. Slot 8 has 5 frames for each state. The pole slot has 9. The boxes are the same on both sides, because the poses agree. Values are sRGB-decoded means after the tone
+map. The ratio is `A / (A + B)` as in [hull-tone.md](hull-tone.md), as (R, G, B).
+
+| Slot | Box (x0,y0,x1,y1) | Original A | Original B | Original ratio | Ours A | Ours B | Ours ratio |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| pole | housing 590,470,690,560 | .012 .012 .036 | .172 .188 .193 | .06 .06 .16 | 0 0 0 | .146 .159 .172 | 0 0 0 |
+| pole | spine 610,410,670,450 | .004 .006 .010 | .431 .493 .195 | .01 .01 .05 | 0 0 0 | .426 .479 .182 | 0 0 0 |
+| pole | nose 620,360,660,400 | .040 .054 .071 | .583 .633 .670 | .06 .08 .10 | 0 0 0 | .563 .620 .680 | 0 0 0 |
+| pole | left wing 470,580,540,620 | .039 .041 .044 | .121 .349 .609 | .25 .10 .07 | 0 0 0 | .086 .296 .606 | 0 0 0 |
+| pole | right wing 760,580,830,620 | .018 .022 .023 | .104 .370 .619 | .14 .06 .04 | 0 0 0 | .104 .363 .649 | 0 0 0 |
+| 8 | housing | .013 .018 .037 | .118 .134 .146 | .10 .12 .20 | .040 .040 .024 | .135 .149 .140 | .23 .21 .15 |
+| 8 | spine | .212 .246 .130 | .218 .197 .052 | .49 .56 .71 | .414 .465 .166 | .065 .059 .012 | .86 .89 .93 |
+| 8 | nose | .608 .625 .632 | .348 .347 .293 | .64 .64 .68 | .618 .654 .671 | 0 0 0 | 1 1 1 |
+| 8 | left wing | .216 .438 .589 | .211 .275 .261 | .51 .61 .69 | .091 .347 .589 | 0 0 0 | 1 1 1 |
+| 8 | right wing | .075 .139 .215 | .103 .243 .400 | .42 .36 .35 | .038 .102 .165 | .076 .282 .464 | .34 .27 .26 |
+| 8 | track control 340,360,440,410 | .100 .113 .108 | .103 .117 .113 | .49 .49 .49 | .109 .122 .119 | .116 .130 .128 | .48 .48 .48 |
+
+**Reading.**
+
+- **Pole slot: the acceptance holds (confidence 80).** The spine reads 0.00 against the original's 0.01. The housing
+  reads 0.00 against 0.06 to 0.16, under the 0.2 limit. Ours' B agrees with the original's B within about 5 % on the
+  spine, the nose and the right wing. On the wings the original's ratio is 0.04 to 0.25 and ours is 0. The wings were
+  not part of the acceptance.
+- **Slot 8, where the shade falls (confidence 70).** Both sides have the dark housing bay and the part-shaded right wing.
+- **Slot 8, sunlit panels: the ratio differs (confidence 60 for the cause).** Ours reads 0.86 to 1.0. The original reads
+  0.49 to 0.64. The original has an additive term in both states that ours has not. On the pole slot its A is neutral grey
+  (`(.039, .041, .044)` on the blue left wing) where its B is blue. On slot 8 its B on the sunlit left wing is near
+  neutral (`(.211, .275, .261)`) where its A is blue. A term that does not follow the albedo and is in both states is not
+  the shadow. With it subtracted, the original's shadow on the sunlit left wing is about 0.8 to 1.0. The cause is not
+  proven. The hull's reflection is the candidate. Ours does not build it.
+- **Slot 8 housing on the doc's box (confidence 70).** Ours reads 0.21 to 0.23 (R, G) against the original's 0.10 to
+  0.12. That is over the 0.2 limit by a few hundredths. On a tighter box, `(620, 470, 660, 530)`, ours reads 0.11 to 0.13.
+- **Bias (confidence 60).** `CIRCUIT_SHADE_BIAS` stays at 0.0002. The sunlit panels show no acne, because their B is 0.
+  The bay reads as shaded.
+- **Control.** The track panel reads 0.48 on ours and 0.49 on the original. The two states have the same exposure.
+
+**Not checked.** 2048: not checkable: no 2048 package on the machine. HD and 2048 stay pixel-identical under `original`
+by construction, because their `hull_shade` keeps the earlier path. That was not measured: no HD image and no 2048
+package were on the machine.
+
 ## Open
 
 - The pass for each model instance at `0x015fb15e`: the fit of its box and its first two axes to the craft, the query

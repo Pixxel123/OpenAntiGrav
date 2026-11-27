@@ -445,6 +445,12 @@ light that multiplies an over-bright hull gives a constant factor. The larger fa
 ranges is not explained by that. Two candidates are not measured: the scale of the normal that
 the original does not normalise, and the position wander (confidence 40 for each).
 
+**With the hull's circuit shade wired (2026-11-27).** This run rendered ours at `D = -1.0`, `FEISAR_C1`, 1920x1080, ticks 600
+to 603, with `--shadows original`. The warm pixels were 304, 281, 307 and 303 (mean 299). The summed excess was 17,391,
+16,075, 17,441 and 17,524 (mean 17,108). Before the shade, with the same range, ours' unlit count was 910 and its excess
+was 49,108. The original's are 496 and 25,120. Ours' count went from 1.8 times the original's to 0.6 times. Its excess
+went from 2.0 times to 0.7 times. Both ratios come from the means above. Ours' count is now under the original's.
+
 **Cross-title.** 2048 was not checked: no 2048 package was on the machine that made this run.
 
 ## Names
