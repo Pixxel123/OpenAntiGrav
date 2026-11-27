@@ -2,7 +2,7 @@
 status: measure
 titles: [omega]
 updated: 2026-11-27
-summary: "Omega's hull shade is wired under original; open: sunlit-panel term, slot 8 housing, fit rule, bias, default tier"
+summary: "Omega's hull shade is wired under original. Open: sunlit-panel term, slot 8 housing, fit rule, bias, default tier"
 categories: [rendering]
 ---
 

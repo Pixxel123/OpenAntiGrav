@@ -841,9 +841,9 @@ ours' settings file for every platform. The build that made the adopted Omega pa
 occlusion. Metro Park's adopted frame matched a `--shadows original` render of that build on the hull box, 91.5 against 91.9.
 The left-grass shadow matched too, 68.6 against 68.8. `off` reads 114.3 and 84.4. Under `original`, Omega's hull now takes the
 circuit-shade map instead (below). This change does not re-make the pairs. Flipping `Title::original_shadows` changes the
-player's default only and moves no pair. Building `original` on Omega properly means scoping the sun-occlusion pass off by title
-data (which **will** move the Omega pairs, the hull first) and reading the second caster list; until then the default stays
-`off`.
+player's default only and moves no pair. Building `original` on Omega properly has two parts. The first is scoping the
+sun-occlusion pass off by title data, which **will** move the Omega pairs, the hull first. The second is reading the second
+caster list. Until then the default stays `off`.
 
 **Omega's hull shade: built (2026-11-27, lane `hull-shadow-wire`).** `Title::hull_shade` on Omega is
 `HullShade::CircuitAndSelf { reach: 377.0 }`. Under `--shadows original` each craft's hull compares against a depth map of its own, with nine taps. The map
