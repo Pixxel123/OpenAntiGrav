@@ -16,8 +16,11 @@ subtracted. The housing bay agrees too, now that the craft casts into the map wi
 
 ## Open
 
-- The original's hull shows a term that follows neither `Sun color` nor `K` nor `Ks` (the nose reads `.33` with all
-  three at 0). Ours has no such term. The hull's reflection is the candidate. Read what it is.
+- The original's hull has a neutral term that needs no sun. With the hull's live sun triple at 0 the slot 8 nose
+  still reads `(.138, .160, .187)` and a yellow panel `(.351, .360, .373)`. Ours has no such term. The cube
+  reflection is the candidate. What the cube holds is unread. Read it, then build it.
+- Ours' sun term on the hull is larger than the original's. On the slot 8 nose the original's sun term is about
+  `(.180, .156, .074)`. Ours reaches the same shipped value with no neutral term.
 - The fit of the box and of its first two axes to the craft is not read. Ours' 7 units each way is chosen, not measured.
 - Ours' far plane is 7 units past the craft (depth 384). That is chosen, not measured. The original's far plane is at the
   craft, and its exact offset is unread.

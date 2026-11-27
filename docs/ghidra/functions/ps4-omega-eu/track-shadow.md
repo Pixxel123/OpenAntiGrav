@@ -311,8 +311,8 @@ screenshots from the state's `from` time to two seconds before its `to` time. Th
   covers more than ours'. The cause is not read. One candidate is the craft's own faces in the map.
   Ours draws the craft with its front faces culled. The original's caster program is unread.
   "The craft's own faces in the map" below resolves these two boxes.
-- **What the term is stays unread.** It does not follow `Sun color`, `K` or `Ks`. The hull's
-  reflection is the candidate.
+- **What the term is.** "The leftover term is the hull's sun and a neutral term" below reads it. A write to
+  `Sun color` does not reach the hull, so D still holds the hull's sun term.
 
 The pole slot's left wing reads `0.31, 0.17, 0.11` on the original, from a grey A of
 `(.088, .090, .093)`. One of its four A frames carries a bright patch there. It is not in the table.
@@ -320,6 +320,49 @@ The pole slot's left wing reads `0.31, 0.17, 0.11` on the original, from a grey 
 **Not checked.** 2048: not checkable: no 2048 package on the machine. HD and 2048 stay pixel-identical under `original`
 by construction, because their `hull_shade` keeps the earlier path. That was not measured: no HD image and no 2048
 package were on the machine.
+
+### The leftover term is the hull's sun and a neutral term (2026-11-27)
+
+State D has `Sun color` at 0. That write does not reach the hull. The hull's sun term reads the live
+triple at `0x800eb4810` ([hull-tone.md](hull-tone.md), "The measurement"). So D still holds the hull's
+sun term. This run reads the two parts of D.
+
+`LIVESUN=1` adds two states on top of D. State E also holds the live triple at 0. The triple reads
+`(4, 3.608, 2.165)` before the write. State F also holds the three floats at `0x800eb4800` at 0. They
+read `(0.310, 0.259, 0.714)`, the settings object's ambient. Slot 8 has four frames for each state. The pole
+slot has four to six.
+
+| Slot | Box | D | E, live sun at 0 | F, ambient at 0 too | D less E |
+| --- | --- | --- | --- | --- | --- |
+| 8 | nose | `.318 .317 .261` | `.138 .160 .187` | `.146 .169 .196` | `.180 .156 .074` |
+| 8 | left panel `(555, 420)-(600, 450)` | `.526 .588 .525` | `.351 .360 .373` | `.344 .353 .368` | `.176 .229 .152` |
+| 8 | left wing | `.147 .212 .209` | `.103 .114 .130` | `.121 .132 .146` | `.044 .097 .079` |
+| 8 | right wing | `.046 .063 .090` | `.040 .054 .085` | `.041 .055 .086` | `.005 .009 .005` |
+| 8 | housing | `.006 .007 .018` | `.013 .015 .039` | `.010 .013 .034` | `-.007 -.008 -.021` |
+| 8 | track control | `.107 .122 .120` | `.049 .069 .112` | `.050 .071 .115` | `.058 .052 .008` |
+| pole | nose | `.038 .053 .070` | `.052 .069 .097` | `.045 .062 .087` | `-.014 -.016 -.028` |
+| pole | left panel | `.138 .161 .189` | `.104 .138 .202` | `.088 .118 .175` | `.034 .023 -.013` |
+| pole | left wing | `.023 .026 .028` | `.018 .019 .024` | `.024 .026 .031` | `.006 .007 .004` |
+| pole | track control | `.344 .083 .094` | `.437 .121 .136` | `.439 .121 .136` | `-.094 -.038 -.042` |
+
+- **Part of D is the hull's sun term (confidence 80).** On slot 8 the nose loses `(.180, .156, .074)` when the
+  live triple goes to 0. The loss is warm, as the sun is. On the pole slot, in the shade, the nose does not
+  lose light. The right wing on slot 8, which is in shade, loses nothing.
+- **The rest is a neutral term that needs no sun (confidence 75).** With the live sun at 0 the slot 8 nose still
+  reads `(.138, .160, .187)` and the left panel `(.351, .360, .373)`. The term is near neutral on a yellow panel
+  and on a blue wing. It does not follow the albedo. It is in the shade too: the pole slot's left panel
+  reads `(.104, .138, .202)`.
+- **The ambient at `0x800eb4800` does not move the hull.** F agrees with E within the frame noise. This agrees
+  with [hull-tone.md](hull-tone.md).
+- **The reflection is the candidate for the neutral term.** The hull program adds
+  `albedo.a * (6.87 * (1 - n.v)^9.23 + Chromeness + 0.1) * cubeReflectionTex` after the albedo product, and it
+  does not multiply that term by `shadow` ([hull-tone.md](hull-tone.md)). What the cube holds is unread.
+- **Limits.** The picture's exposure moves when the sun goes to 0. The pole slot's track control box goes from
+  `.344` to `.437` in red. So E and F are not on D's exposure, and the neutral term's size has that error. The
+  original's frames also move a lot from frame to frame: the slot 8 nose reads `.254` to `.403` over D's four frames.
+- **Ours.** Ours has no neutral term on Omega's hull. Ours' sunlit nose reads `(.317, .296, .215)` as shipped
+  against the original's `(.335, .337, .298)`. Ours gets there with sun and ambient alone, so ours' sun term on
+  the hull is larger than the original's. That agrees with the sun ratio in [hull-tone.md](hull-tone.md).
 
 ### The craft's own faces in the map (2026-11-27)
 
