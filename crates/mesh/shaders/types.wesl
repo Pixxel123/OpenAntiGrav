@@ -5,7 +5,7 @@ struct Uniforms {
     model: mat4x4<f32>,
     // Which layer of the per-craft sun-occlusion array this model samples,
     // **plus one** - `0.0` for none, which is every draw but a craft's hull
-    // under the `original` tier on a title whose hull reads the map.
+    // under `original` or `mapped` on a title whose hull reads the map.
     // **Negative, `-(layer + 1)`, names a layer read by its depth map alone**
     // with nine compared taps (`circuit_shade` in `shadow.wesl`). See
     // `sun_occlusion` below and `oag_render::shadow::occlusion`. It sits in

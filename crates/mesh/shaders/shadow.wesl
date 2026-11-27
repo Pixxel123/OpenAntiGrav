@@ -290,10 +290,13 @@ const CIRCUIT_SHADE_BIAS: f32 = 0.0002;
 // How much sun reaches this point of a hull whose layer holds the circuit's
 // pieces near the craft and the craft in one depth map, `0.0` to `1.0`: nine
 // compared taps a texel apart, on a three-by-three grid centred on the point,
-// and their mean. The original's hull reads its map with four
-// `image_gather4_c_lz_o` and weights nine of the sixteen results `1 / 9`
-// (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "The hull's lookup,
-// read off its program").
+// and their mean. These nine single compared taps stand in for the original's
+// four `image_gather4_c_lz_o`, whose sixteen results give nine taps of `1 / 9`
+// each (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "The hull's
+// lookup, read off its program").
+//
+// Off the box's sides the clamped edge texel is read; past the far plane a
+// point reads fully shaded. Neither arises for a hull inside the box.
 //
 // **The colour mask is not read**: such a layer draws none, so
 // `sun_occlusion_tex` holds whatever an earlier frame left in it. The matrix

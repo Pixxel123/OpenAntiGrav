@@ -108,6 +108,7 @@ pub const TITLE: &Title = &Title {
     cursor: include_str!("../../../assets/cursors/pure.svg"),
     // Pure authors none of the seven shadow classes (`docs/formats/pure-status.md`): nothing is the right picture.
     original_shadows: oag_title::shadow::OriginalShadows::Absent,
+    // Nothing draws it: `original_shadows` is `Absent`.
     hull_shade: oag_title::shadow::HullShade::RoadMaskTimesSelf,
     // Sinucit's rain and Sebenco Climb's snow play through `circuit_weather`
     // (`docs/rendering/pure-weather.md`). The WEATHER setting row and a track module's

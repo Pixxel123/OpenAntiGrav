@@ -164,7 +164,8 @@ pub const CRAFT_HALF_EXTENT: f32 = 12.0;
 /// half-extents and follows the craft
 /// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
 /// "The map of an instance, read live"); how it fits its two axes to the craft
-/// is unread. 7 covers the measured box at any rotation about the light's axis.
+/// is unread. 7 covers the measured half-extents; at the worst rotation about
+/// the light's axis the measured box's corners reach 7.04.
 pub const CIRCUIT_SHADE_HALF_EXTENT: f32 = 7.0;
 
 /// The radius of the sphere around a craft outside which the receiver skips its
@@ -308,10 +309,11 @@ impl Fit {
     /// [`Self::matrix_reaching`] with unequal depth: the near plane (clip z 0)
     /// sits `towards` units up the light from [`Self::centre`] and the far
     /// plane (clip z 1) `away` units past it. The box across the light and its
-    /// basis are the same as [`Self::matrix_reaching`]'s.
+    /// basis are the same as [`Self::matrix_reaching`]'s. `towards` is clamped
+    /// to at least 1 and `away` to at least 0.
     ///
-    /// For a map that must see casters far towards the sun while spending no
-    /// depth behind the receiver.
+    /// For a map that must see casters far towards the sun while spending
+    /// little depth behind the receiver.
     #[must_use]
     pub fn matrix_spanning(&self, towards: f32, away: f32) -> Mat4 {
         let radius = self.radius.max(1.0);

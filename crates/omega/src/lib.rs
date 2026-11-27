@@ -206,7 +206,8 @@ pub const TITLE: &Title = &Title {
     loading: Some(&loading::LOADING),
     music: Some(MUSIC),
     cursor: include_str!("../../../assets/cursors/omega.svg"),
-    // Not tried on Omega: its sun and craft carry-over from HD are unmeasured.
+    // The road's `S`, the cascaded map the circuit receives, is not built
+    // (`docs/rendering/shadows.md`, "Omega's own `S`"); the hull's shade below is wired.
     original_shadows: oag_title::shadow::OriginalShadows::Unbuilt,
     // The circuit's pieces cast onto craft, so a hull is shaded by the circuit in its light
     // column and by itself (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "The

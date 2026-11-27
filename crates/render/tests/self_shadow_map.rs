@@ -312,8 +312,9 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
 
     // The craft: one slab three units thick, its top at local y = 0, placed
     // two units up by its model, so its top is at world y = 2 and its
-    // underside at y = -1. The circuit's model is the identity: a pass that
-    // drew both through one staged matrix would put one of them two units off.
+    // underside at y = -1. The circuit has its own model, a different
+    // translation: a pass that drew both through one staged matrix, or
+    // dropped the circuit's model, would put a piece off its depth.
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     slab(
@@ -337,22 +338,35 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
     // `CRAFT_REACH` - over one half of the craft; a cutout piece over its
     // front; a transparent one over its other half, which does not cast; and
     // a deck far to the side, outside the light's column through the craft.
+    // The positions are world positions: each piece is built at the inverse
+    // of the circuit's model offset, which puts it back.
+    let circuit_offset = Vec3::new(0.5, 3.0, 0.0);
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     let deck = piece(
         &mut vertices,
         &mut indices,
-        Vec3::new(-3.0, 150.0, 0.0),
+        Vec3::new(-3.0, 150.0, 0.0) - circuit_offset,
         2.0,
     );
     let far = piece(
         &mut vertices,
         &mut indices,
-        Vec3::new(40.0, 150.0, 0.0),
+        Vec3::new(40.0, 150.0, 0.0) - circuit_offset,
         2.0,
     );
-    let fence = piece(&mut vertices, &mut indices, Vec3::new(0.0, 30.0, 4.0), 1.0);
-    let glass = piece(&mut vertices, &mut indices, Vec3::new(3.0, 50.0, 0.0), 2.0);
+    let fence = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(0.0, 30.0, 4.0) - circuit_offset,
+        1.0,
+    );
+    let glass = piece(
+        &mut vertices,
+        &mut indices,
+        Vec3::new(3.0, 50.0, 0.0) - circuit_offset,
+        2.0,
+    );
     let (circuit_geometry, circuit_indices) = upload(&device, &queue, &vertices, &indices);
     let draws = [deck, far];
     let cutouts = [fence];
@@ -364,7 +378,7 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
         cutouts: &cutouts,
         transparent: &transparent,
         materials: &[],
-        model: Mat4::IDENTITY,
+        model: Mat4::from_translation(circuit_offset),
     };
 
     let fit = Fit::craft(Vec3::new(0.0, 2.0, 0.0), Vec3::Y);

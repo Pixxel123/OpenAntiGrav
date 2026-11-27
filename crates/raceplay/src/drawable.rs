@@ -1105,7 +1105,7 @@ pub(crate) fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct HullLayers {
     /// Which layer of the frame's per-craft sun-occlusion array the hull samples - a craft
-    /// under the `original` tier on Wipeout HD or Omega - as the uniform's word
+    /// under `original` (on Wipeout HD or Omega) or `mapped` - as the uniform's word
     /// (`Scene::sun_occlusion_layer`), or `0.0` for none, which is what every other
     /// drawable writes. See `oag_render::shadow::occlusion`.
     pub(crate) sun_occlusion: f32,
@@ -1136,8 +1136,9 @@ pub(crate) struct Uniforms {
     view_projection: [[f32; 4]; 4],
     model: [[f32; 4]; 4],
     /// Which layer of the per-craft sun-occlusion array this model samples,
-    /// plus one; `0.0` for none - see `mesh_render`'s own mirror of this
-    /// layout and `oag_render::shadow::occlusion`.
+    /// plus one; `0.0` for none. Negative, `-(layer + 1)`, names a layer read
+    /// by its depth map alone - see `mesh_render`'s own mirror of this layout
+    /// and `oag_render::shadow::occlusion`.
     sun_occlusion_layer: f32,
     /// See `mesh_render`'s own mirror: the model's own animation clock.
     model_clock: f32,

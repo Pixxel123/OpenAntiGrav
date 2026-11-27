@@ -17,11 +17,12 @@ use oag_gpu::writes::Writes;
 use oag_mesh::mesh_render::{SH_PROBE_BYTES, SH_PROBE_ROW, SH_PROBE_ROWS};
 use oag_vex::shprobes::{ShProbes, Taps};
 
-/// The two states of `OAG_DEBUG_HULL_SHADE_STATE`, the read lane's knockouts of the hull's shadow
-/// term (`docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout"):
+/// The two states of `OAG_DEBUG_HULL_SHADE_STATE`, the two knockouts of the hull's shadow term
+/// (`docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout"):
 /// the sun colour at 0 and one ambient scale at 4, the other at 0. A leaves `K 4, Ks 0`, so the
 /// hull draws `4 * shadow * SH`; B leaves `K 0, Ks 4`, so it draws `4 * (1 - shadow) * SH`.
-/// The engine light stays off in both, as in the original's run, so no light is added to the sum.
+/// The knockout law has no engine-light term (same page and section), so the engine light stays
+/// off in both and no light is added to the sum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HullShadeState {
     A,
@@ -71,8 +72,9 @@ pub(crate) fn hull_light(light: oag_mesh::mesh_render::Light) -> oag_mesh::mesh_
 }
 
 /// The SPU lights a craft's hull is drawn with: `lights` itself, or none where
-/// `OAG_DEBUG_HULL_SHADE_STATE` names a state. The original's run had the engine light off, and an
-/// added light in both states would pull their ratio toward one half.
+/// `OAG_DEBUG_HULL_SHADE_STATE` names a state. The knockout law has no engine-light term
+/// (`docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout"), and
+/// an added light in both states would pull their ratio toward one half.
 #[must_use]
 pub(crate) fn hull_spu_lights(
     lights: oag_mesh::mesh_render::SpuLights,

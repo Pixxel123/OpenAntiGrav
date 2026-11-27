@@ -549,12 +549,23 @@ impl super::super::Scene {
                 maps.render_self_shadow(encoder, slot, &caster);
             }
             if slot == 0 && std::env::var_os(DUMP_VAR).is_some() {
-                log::info!(
-                    "sun occlusion layer 0: craft at {:?}, radius {:.1}, sun {:?}",
-                    fit.centre,
-                    fit.radius,
-                    fit.towards_light
-                );
+                if let HullShade::CircuitAndSelf { reach } = shade {
+                    log::info!(
+                        "sun occlusion layer 0: circuit shade, craft at {:?}, half-extent {:.1}, \
+                         {reach:.1} up the sun to {:.1} past the craft, sun {:?}",
+                        fit.centre,
+                        oag_render::shadow::map::CIRCUIT_SHADE_HALF_EXTENT,
+                        oag_render::shadow::map::CIRCUIT_SHADE_HALF_EXTENT,
+                        fit.towards_light
+                    );
+                } else {
+                    log::info!(
+                        "sun occlusion layer 0: craft at {:?}, radius {:.1}, sun {:?}",
+                        fit.centre,
+                        fit.radius,
+                        fit.towards_light
+                    );
+                }
                 for line in self
                     .track
                     .describe_occlusion_draws(fit.centre, fit.towards_light.normalize_or_zero())
@@ -664,9 +675,19 @@ impl super::super::Scene {
             Ok(())
         };
         if let Ok(dump) = std::env::var(DUMP_VAR) {
-            let texels = self.sun_occlusion.borrow().read_back(device, queue, 0);
-            let size = oag_render::shadow::occlusion::SIZE;
-            write(&dump, &texels, size, "sun occlusion")?;
+            // The circuit-shade path draws no colour layer, so there is nothing to write.
+            if matches!(
+                self.sun_occlusion_shade.get(),
+                HullShade::CircuitAndSelf { .. }
+            ) {
+                log::info!(
+                    "{DUMP_VAR}: not writing {dump}: the circuit shade draws no colour layer"
+                );
+            } else {
+                let texels = self.sun_occlusion.borrow().read_back(device, queue, 0);
+                let size = oag_render::shadow::occlusion::SIZE;
+                write(&dump, &texels, size, "sun occlusion")?;
+            }
         }
         if let Ok(dump) = std::env::var(DUMP_SHADOW_MAP_VAR) {
             let texels = self.shadow_map.borrow().read_back(device, queue);
@@ -705,7 +726,9 @@ impl super::super::Scene {
     /// an empty layer is far more often a craft off the circuit's authored
     /// geometry - a synthetic track, a test fixture - than a craft over a
     /// chasm, and "lit as before" is the honest answer for a map that has
-    /// no road in it.
+    /// no road in it. On the circuit-shade path the count includes the
+    /// craft's own ranges, so it is zero only for a craft without a caster
+    /// range.
     pub(in crate::scene) fn sun_occlusion_layer(&self, slot: usize) -> f32 {
         let layer = (self.sun_occlusion.borrow().drawn(slot) > 0).then_some(slot);
         sun_occlusion_word(layer, self.sun_occlusion_shade.get())

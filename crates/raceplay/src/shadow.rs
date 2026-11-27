@@ -382,7 +382,7 @@ pub struct Assets {
 
 impl Default for Assets {
     /// No silhouettes and no hulls, at the default resolution, and the road mask times
-    /// the craft's own depth map, which every title but Omega reads.
+    /// the craft's own depth map as the default `HullShade`.
     fn default() -> Self {
         Self {
             silhouettes: Vec::new(),

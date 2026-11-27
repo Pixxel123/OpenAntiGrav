@@ -71,7 +71,8 @@ pub struct Maps {
     /// Each layer's matrix, staged for [`Self::write_uniforms`].
     staged: LayerUniforms,
     /// The pipeline [`Self::render_with_circuit`] draws the circuit's pieces
-    /// through: the craft's pipeline with no face culling.
+    /// through: the craft's pipeline with no face culling, chosen, not
+    /// measured.
     circuit_pipeline: wgpu::RenderPipeline,
     /// The circuit's own matrix per layer: the circuit and the craft have
     /// different model matrices, so one layer needs two.
@@ -317,10 +318,11 @@ impl Maps {
     /// craft's index ranges. It is not zero while the craft has a range,
     /// whether or not a circuit piece is near.
     ///
-    /// The circuit's opaque and cutout draws cast, drawn with no face culling;
-    /// a cutout draws solid, as the caster has no fragment stage. The craft's
-    /// ranges cast through [`Self::render`]'s pipeline, front faces culled. **The transparent draws do not cast. Chosen, not
-    /// measured**: the original clears the caster bits of a piece whose
+    /// The circuit's opaque and cutout draws cast, drawn with no face culling.
+    /// **A cutout draws solid, chosen, not measured**: the caster has no
+    /// fragment stage. The craft's ranges cast through [`Self::render`]'s
+    /// pipeline, front faces culled. **The transparent draws do not cast.
+    /// Chosen, not measured**: the original clears the caster bits of a piece whose
     /// material binds `screenSpaceRefractionTex`, so a refractive piece does
     /// not cast, and the transparent draws are the nearest set this crate
     /// has to that rule.

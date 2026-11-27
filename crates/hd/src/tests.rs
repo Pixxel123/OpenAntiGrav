@@ -230,7 +230,7 @@ fn hd_has_the_craft_control_law_and_pulse_does_not() {
     );
 }
 
-/// HD's craft take its own depth map times the road's baked mask under it.
+/// On HD a craft takes its own depth map times the road's baked mask under it.
 #[test]
 fn hull_shade_is_the_road_mask_times_the_craft() {
     assert_eq!(

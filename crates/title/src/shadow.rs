@@ -1,4 +1,5 @@
-//! Whether a title's own shadow mechanism is built, and so what its default is.
+//! Whether a title's own shadow mechanism is built, and so what its default is,
+//! and how a title's hull takes the sun's shade ([`HullShade`]).
 //!
 //! The `original` shadow tier draws what the title itself authors
 //! (`oag_display::display::Shadows::Original`). Which titles have anything to
