@@ -373,13 +373,21 @@ pub struct Scene {
     view_lists: std::cell::RefCell<record::ViewLists>,
     /// What the craft shadow map's ranking works in, kept from frame to frame.
     shadow_rank: std::cell::RefCell<frame::ShadowRank>,
-    /// The `original` tier's two per-craft maps on Wipeout HD: the track
+    /// The `original` tier's two per-craft maps: on Wipeout HD the track
     /// under the craft drawn from the sun as its own baked sun-occlusion mask,
     /// and the craft's own depth from the sun, which together gate the hull's
-    /// sun term. Built for every race and bound by
+    /// sun term; on Omega one depth map of the circuit near the craft and the
+    /// craft ([`Self::hull_shade`]). Built for every race and bound by
     /// every drawable like [`Self::shadow_map`]; a hull that names no layer
     /// never samples it. See `oag_render::shadow::occlusion`.
     sun_occlusion: std::cell::RefCell<oag_render::shadow::occlusion::Maps>,
+    /// How the craft's title shades a hull under the `original` tier, which
+    /// decides what [`Self::sun_occlusion`] draws (`crate::shadow::Assets::hull_shade`).
+    hull_shade: oag_title::shadow::HullShade,
+    /// How the layers the last `render_sun_occlusion` drew are read: [`Self::hull_shade`],
+    /// or the road mask times the craft under the `mapped` tier, which keeps that path on
+    /// every title. A later view of a split reads what the first view drew.
+    sun_occlusion_shade: std::cell::Cell<oag_title::shadow::HullShade>,
     /// The `original` tier's geometry, one authored hull per grid slot where
     /// the craft's model carries one. CPU-side: it is projected afresh every
     /// frame against the surface under the craft, so there is nothing to
@@ -700,6 +708,7 @@ impl Scene {
             silhouettes: shadows,
             hulls: shadow_hulls,
             resolution,
+            hull_shade,
         } = shadows;
         let shadow_resolution = oag_render::shadow::map::Resolution::scaled(resolution.scale());
         let shadow_map = oag_render::shadow::map::Map::new(device, shadow_resolution);
@@ -1323,6 +1332,8 @@ impl Scene {
             frame_work: Default::default(),
             reuse_frame_work: std::cell::Cell::new(false),
             sun_occlusion: std::cell::RefCell::new(sun_occlusion),
+            hull_shade,
+            sun_occlusion_shade: std::cell::Cell::new(hull_shade),
             shadow_hulls,
             scratch: std::cell::RefCell::default(),
             depth,

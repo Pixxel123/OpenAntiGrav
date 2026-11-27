@@ -11,6 +11,7 @@ use oag_core::math::frustum::Frustum;
 use oag_core::math::{Mat4, Vec3};
 use oag_mesh::mesh::GpuVertex;
 use oag_render::shadow::Placement;
+use oag_title::shadow::HullShade;
 
 use crate::Race;
 use crate::scene::FrameWork;
@@ -456,9 +457,12 @@ const DUMP_SELF_SHADOW_VAR: &str = "OAG_DUMP_SELF_SHADOW";
 impl super::super::Scene {
     /// Renders each active craft's sun-occlusion map - the track within
     /// `occlusion::RADIUS` of the craft, from the sun, as its own baked mask -
-    /// and its self-shadow depth map from the same box.
+    /// and its self-shadow depth map from the same box. Where the title's hull
+    /// takes the shade of the circuit ([`HullShade::CircuitAndSelf`], Omega),
+    /// the `original` tier draws one depth map of the circuit near the craft
+    /// and the craft in place of both.
     ///
-    /// **Wipeout HD's `original` tier, and by data rather than by name**: it
+    /// **Wipeout HD's and Omega's `original` tier, and by data rather than by name**: it
     /// needs the circuit's own sun (`light.enabled`, which only an authored
     /// `.envsettings` rig sets) and a title that shadows by map rather than
     /// by authored hull. Anywhere else every layer is cleared and no craft
@@ -487,6 +491,13 @@ impl super::super::Scene {
         let active = (shadows == oag_display::display::Shadows::Original || mapped)
             && !hulls
             && self.light.enabled > 0.5;
+        // `mapped` keeps the road mask and the craft on every title.
+        let shade = if mapped {
+            HullShade::RoadMaskTimesSelf
+        } else {
+            self.hull_shade
+        };
+        self.sun_occlusion_shade.set(shade);
         let drawn = usize::from(race.core.sim.ship_count());
         let track = self.track.occlusion_track();
         for slot in 0..(oag_mesh::mesh_render::OCCLUSION_LAYERS as usize) {
@@ -515,20 +526,28 @@ impl super::super::Scene {
             // hull, and a box that size is a map of the neighbourhood rather
             // than of the craft.
             let fit = craft_fit(model, &self.light);
-            maps.render(encoder, slot, &fit, &track);
-            // The craft's own depth map from the same box: its opaque ranges
-            // and nothing else, so a wing shadows the fuselage and no other
-            // craft shadows either. See `oag_render::shadow::self_shadow`.
-            // Under `mapped` the depth map already shadows the hull with
-            // itself; an empty caster clears this layer to far, which reads lit,
-            // so the hull is not self-shadowed twice.
             let ship = &self.ships[slot];
-            let caster = if mapped {
-                ship.caster_of(&[], model)
+            if let HullShade::CircuitAndSelf { reach } = shade {
+                // Omega's one map: the circuit pieces in the craft's light
+                // column and the craft, read by its depth alone
+                // (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`,
+                // "The circuit's pieces cast onto craft").
+                maps.render_circuit_shade(encoder, slot, &fit, reach, &track, &ship.caster(model));
             } else {
-                ship.caster(model)
-            };
-            maps.render_self_shadow(encoder, slot, &caster);
+                maps.render(encoder, slot, &fit, &track);
+                // The craft's own depth map from the same box: its opaque ranges
+                // and nothing else, so a wing shadows the fuselage and no other
+                // craft shadows either. See `oag_render::shadow::self_shadow`.
+                // Under `mapped` the depth map already shadows the hull with
+                // itself; an empty caster clears this layer to far, which reads lit,
+                // so the hull is not self-shadowed twice.
+                let caster = if mapped {
+                    ship.caster_of(&[], model)
+                } else {
+                    ship.caster(model)
+                };
+                maps.render_self_shadow(encoder, slot, &caster);
+            }
             if slot == 0 && std::env::var_os(DUMP_VAR).is_some() {
                 log::info!(
                     "sun occlusion layer 0: craft at {:?}, radius {:.1}, sun {:?}",
@@ -676,9 +695,10 @@ impl super::super::Scene {
         std::array::from_fn(|layer| maps.matrix(layer).to_cols_array_2d())
     }
 
-    /// Which sun-occlusion layer the craft in `slot` samples this frame:
-    /// its own, when [`Self::render_sun_occlusion`] drew anything into it -
-    /// a cleared layer counts as nothing drawn.
+    /// Which sun-occlusion layer the craft in `slot` samples this frame, as the
+    /// model uniform's word ([`sun_occlusion_word`]): its own, when
+    /// [`Self::render_sun_occlusion`] drew anything into it - a cleared layer
+    /// counts as nothing drawn - read the way that pass drew it.
     ///
     /// A layer that drew nothing is left unnamed rather than sampled: the
     /// original's black clear would read as no sun there, but on this side
@@ -686,8 +706,9 @@ impl super::super::Scene {
     /// geometry - a synthetic track, a test fixture - than a craft over a
     /// chasm, and "lit as before" is the honest answer for a map that has
     /// no road in it.
-    pub(in crate::scene) fn sun_occlusion_layer(&self, slot: usize) -> Option<usize> {
-        (self.sun_occlusion.borrow().drawn(slot) > 0).then_some(slot)
+    pub(in crate::scene) fn sun_occlusion_layer(&self, slot: usize) -> f32 {
+        let layer = (self.sun_occlusion.borrow().drawn(slot) > 0).then_some(slot);
+        sun_occlusion_word(layer, self.sun_occlusion_shade.get())
     }
 
     /// The craft the `mapped` map is fitted on: the one the view being drawn
@@ -958,6 +979,21 @@ fn far_depth_bias() -> f32 {
     MAPPED_DEPTH_BIAS * depth(MAPPED_RADIUS) / depth(MAPPED_FAR_RADIUS)
 }
 
+/// The model uniform's `sun_occlusion_layer` for a hull that samples `layer`:
+/// `layer + 1` where the hull reads the road mask times its own depth map,
+/// `-(layer + 1)` where it reads the layer's depth map alone
+/// ([`HullShade::CircuitAndSelf`], `circuit_shade` in `oag-mesh`'s
+/// `shadow.wesl`), and `0.0` for no layer.
+fn sun_occlusion_word(layer: Option<usize>, shade: HullShade) -> f32 {
+    layer.map_or(0.0, |layer| {
+        let word = layer as f32 + 1.0;
+        match shade {
+            HullShade::RoadMaskTimesSelf => word,
+            HullShade::CircuitAndSelf { .. } => -word,
+        }
+    })
+}
+
 /// The fit an empty pass uses: anywhere, one unit across, straight down.
 ///
 /// A cleared map needs a projection for nothing to be drawn with, and this is
@@ -977,7 +1013,7 @@ mod tests {
 
     use super::{
         MAPPED_AHEAD, MAPPED_DEPTH_BIAS, craft_shadow_seen, far_depth_bias, mapped_centre,
-        mapped_far_fit, mapped_fit, mapped_light,
+        mapped_far_fit, mapped_fit, mapped_light, sun_occlusion_word,
     };
     use oag_core::math::Vec3;
     use oag_core::math::frustum::Frustum;
@@ -1208,6 +1244,22 @@ mod tests {
     fn the_far_bias_is_the_near_one_in_the_far_layers_units() {
         let far = far_depth_bias();
         assert!(far > 0.0 && far < MAPPED_DEPTH_BIAS, "far bias {far}");
+    }
+
+    /// A hull's layer word: `layer + 1` where the hull reads the road mask times its own
+    /// depth map, `-(layer + 1)` where it reads the circuit-shade depth map alone, and `0.0`
+    /// for no layer either way.
+    #[test]
+    fn the_layer_word_is_negative_where_the_hull_reads_the_circuit_shade() {
+        use oag_title::shadow::HullShade;
+        let circuit = HullShade::CircuitAndSelf { reach: 377.0 };
+        let road = HullShade::RoadMaskTimesSelf;
+        assert_eq!(sun_occlusion_word(Some(0), circuit), -1.0);
+        assert_eq!(sun_occlusion_word(Some(3), circuit), -4.0);
+        assert_eq!(sun_occlusion_word(Some(0), road), 1.0);
+        assert_eq!(sun_occlusion_word(Some(3), road), 4.0);
+        assert_eq!(sun_occlusion_word(None, circuit), 0.0);
+        assert_eq!(sun_occlusion_word(None, road), 0.0);
     }
 
     /// A track file's sun sets the direction; without one, Pulse's own axis.
