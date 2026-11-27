@@ -11,8 +11,8 @@
 //! the map at all.
 //!
 //! The second test draws the same layer as Omega's circuit shade: the circuit
-//! pieces in the light's column through the craft, and the craft, into one
-//! depth map.
+//! pieces in the light's column through the craft, and the craft with every
+//! face, into one depth map.
 //!
 //! Skips when there is no adapter, like `velocity_target.rs`.
 
@@ -90,6 +90,10 @@ fn project(matrix: Mat4, world: Vec3) -> (Vec3, usize) {
 /// `mesh.wgsl`'s `SELF_SHADOW_BIAS`, restated: the compare is
 /// `ndc.z - bias <= depth`.
 const BIAS: f32 = 0.001;
+
+/// `shadow.wesl`'s `CIRCUIT_SHADE_BIAS`, restated: the circuit-shade compare
+/// is `ndc.z - bias <= depth`.
+const CIRCUIT_SHADE_BIAS: f32 = 0.0002;
 
 #[test]
 fn a_wing_shadows_the_fuselage_under_it_and_the_rest_of_the_hull_is_lit() {
@@ -333,8 +337,8 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
         model: craft_model,
     };
 
-    // The circuit, every piece a single-sided quad facing the sun, which the
-    // craft's front-face cull would drop. A deck 150 units up - past the 70 of
+    // The circuit, every piece a single-sided quad facing the sun, which a
+    // front-face cull would drop. A deck 150 units up - past the 70 of
     // `CRAFT_REACH` - over one half of the craft; a cutout piece over its
     // front; a transparent one over its other half, which does not cast; and
     // a deck far to the side, outside the light's column through the craft.
@@ -408,9 +412,10 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
             depth[texel]
         );
     };
+    // The receiver's compare, as `shadow.wesl` makes it on this path.
     let shaded = |world: Vec3| {
         let (ndc, texel) = project(matrix, world);
-        ndc.z > depth[texel]
+        ndc.z - CIRCUIT_SHADE_BIAS > depth[texel]
     };
 
     holds(Vec3::new(-3.0, 150.0, 0.0), "the deck");
@@ -423,9 +428,11 @@ fn circuit_shade_holds_a_deck_above_the_craft() {
         shaded(Vec3::new(0.0, 2.0, 4.0)),
         "the craft's top under the fence"
     );
-    // Under the glass the map holds the craft's own underside, through the
-    // craft's model, and the top compares lit.
-    holds(Vec3::new(3.0, -1.0, 0.0), "the craft's underside");
+    // Under the glass the map holds the craft's own top, through the craft's
+    // model: the craft casts with every face, so a front-face cull, which
+    // leaves the underside at y = -1, fails here. The top compares lit
+    // against itself through the receiver's bias.
+    holds(Vec3::new(3.0, 2.0, 0.0), "the craft's top");
     assert!(
         !shaded(Vec3::new(3.0, 2.0, 0.0)),
         "the craft's top under the glass"

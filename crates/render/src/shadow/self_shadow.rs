@@ -71,8 +71,8 @@ pub struct Maps {
     /// Each layer's matrix, staged for [`Self::write_uniforms`].
     staged: LayerUniforms,
     /// The pipeline [`Self::render_with_circuit`] draws the circuit's pieces
-    /// through: the craft's pipeline with no face culling, chosen, not
-    /// measured.
+    /// and the craft through: the craft's pipeline with no face culling,
+    /// chosen, not measured.
     circuit_pipeline: wgpu::RenderPipeline,
     /// The circuit's own matrix per layer: the circuit and the craft have
     /// different model matrices, so one layer needs two.
@@ -207,7 +207,8 @@ impl Maps {
         // ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
         // "The circuit's pieces cast onto craft"). A circuit piece is often a
         // single-sided panel, a deck's underside or a roof seen from either
-        // side, which a front-face cull would drop whole.
+        // side, which a front-face cull would drop whole. The craft casts
+        // through it too on that path ([`Self::render_with_circuit`] says why).
         let circuit_pipeline = caster_pipeline("circuit shade caster", None);
 
         let layer_uniforms = |label: &str| {
@@ -320,8 +321,15 @@ impl Maps {
     ///
     /// The circuit's opaque and cutout draws cast, drawn with no face culling.
     /// **A cutout draws solid, chosen, not measured**: the caster has no
-    /// fragment stage. The craft's ranges cast through [`Self::render`]'s
-    /// pipeline, front faces culled. **The transparent draws do not cast.
+    /// fragment stage. **The craft's ranges cast with no face culling, unlike
+    /// [`Self::render`]'s. Chosen, not measured**: the original's caster
+    /// program is unread, and this is the variant whose shade agrees with the
+    /// original's on five boxes of one craft
+    /// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
+    /// "The craft's own faces in the map"). With every face in the map, the
+    /// hull's lit faces compare against themselves through the receiver's
+    /// bias, and the walls of the housing bay shade the bay.
+    /// **The transparent draws do not cast.
     /// Chosen, not measured**: the original clears the caster bits of a piece whose
     /// material binds `screenSpaceRefractionTex`, so a refractive piece does
     /// not cast, and the transparent draws are the nearest set this crate
@@ -380,8 +388,11 @@ impl Maps {
                 cursor.draw(&mut pass, &draw.range);
             }
         }
+        // The craft casts with every face, through the circuit's no-cull
+        // pipeline and its own matrix. Both pipelines share one bind group
+        // layout, so the craft's bind group fits either.
         if !caster.ranges.is_empty() {
-            pass.set_pipeline(&self.pipeline);
+            pass.set_pipeline(&self.circuit_pipeline);
             pass.set_bind_group(0, &self.binds[layer], &[]);
             let mut cursor = caster.geometry.cursor(&mut pass);
             pass.set_index_buffer(caster.indices.slice(..), wgpu::IndexFormat::Uint32);
