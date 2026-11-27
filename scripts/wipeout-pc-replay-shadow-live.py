@@ -9,6 +9,7 @@ starts the port, so `/proc/<pid>/mem` is open to it. It switches the engine ligh
 Heights' authored floats, and holds three states with the sun colour at 0: `K 4, Ks 0`, then `K 0, Ks 4`, then the sun
 alone. `KNOCK=1` repeats the first two with the shadow map forced to 1, and `HOLD` is the seconds of frames per state.
 `DUMP=1` adds the raw blocks of the pass for each model instance to `note.json`.
+`NEITHER=1` adds a state with the sun and both ambient scales at 0.
 `NOCAST=1` then clears the circuit nodes' caster bits and repeats the two again. `note.json` has the wall-clock span of each state; `wipeout-pc-replay-shadow-ratio.py` reads the frames.
 `SETTLE` is the seconds from the last replayed press to the first state. Every write is to this run's own process.
 `docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout".
@@ -141,6 +142,11 @@ try:
     state("sA-sun0-K4-Ks0", [sun0, (12, [4.0]), (16, [0.0])], 2, hold)
     state("sB-sun0-K0-Ks4", [sun0, (12, [0.0]), (16, [4.0])], 2, hold)
     state("sC-sun0-only", [sun0], 1.5, 2)
+    if os.environ.get("NEITHER") == "1":
+        # What the hull still shows with the sun and both ambient scales at 0 is in A and in B alike,
+        # so it is subtracted before the ratio
+        # (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "Wired").
+        state("sD-sun0-K0-Ks0", [sun0, (12, [0.0]), (16, [0.0])], 2, hold)
     if os.environ.get("KNOCK") == "1":
         os.pwrite(fd, bytes(8), knock)
         state("s1-map1", [], 2, 3)
