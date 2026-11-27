@@ -157,6 +157,16 @@ impl Resolution {
 /// the box to the ship's own bbox with none.
 pub const CRAFT_HALF_EXTENT: f32 = 12.0;
 
+/// Half the side of the box Omega's circuit-shade map is fitted to across the
+/// sun, in world units.
+///
+/// **Chosen, not measured.** The original's box, read live, is about 5.3 by 4.7
+/// half-extents and follows the craft
+/// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
+/// "The map of an instance, read live"); how it fits its two axes to the craft
+/// is unread. 7 covers the measured box at any rotation about the light's axis.
+pub const CIRCUIT_SHADE_HALF_EXTENT: f32 = 7.0;
+
 /// The radius of the sphere around a craft outside which the receiver skips its
 /// map without projecting, in world units. **Not a new bound**: it encloses the
 /// receiver's slab (50 units past the craft along the sun, the box's 12-unit

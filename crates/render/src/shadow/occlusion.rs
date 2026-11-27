@@ -50,7 +50,7 @@
 use oag_core::math::{Mat4, Vec3};
 
 use super::layer_uniforms::LayerUniforms;
-use super::map::{Caster, Fit};
+use super::map::{CIRCUIT_SHADE_HALF_EXTENT, Caster, Fit};
 use super::self_shadow;
 use oag_mesh::mesh::{DrawCall, GpuVertex};
 use oag_mesh::mesh_render::{OCCLUSION_FORMAT, OCCLUSION_LAYERS};
@@ -383,6 +383,54 @@ impl Maps {
     ) -> usize {
         let matrix = self.matrix(layer);
         self.self_shadow.render(encoder, layer, matrix, caster)
+    }
+
+    /// Renders Omega's circuit-shade map into `layer`'s self-shadow depth map:
+    /// every opaque and cutout draw call of `track` within [`RADIUS`] of the
+    /// sun's line through `fit.centre`, and `caster`, through one matrix
+    /// ([`self_shadow::Maps::render_with_circuit`]). In place of
+    /// [`Self::render`] and [`Self::render_self_shadow`]: the colour mask is
+    /// not drawn, and the hull reads the depth map alone.
+    ///
+    /// Returns how many draws it made, and marks the layer drawn with that
+    /// count, so a hull names the layer by [`Self::drawn`] as it does today.
+    ///
+    /// The box is [`CIRCUIT_SHADE_HALF_EXTENT`] across the sun, its near plane
+    /// `reach` units up the sun from the craft
+    /// ([`track-shadow.md`](../../../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md),
+    /// "The map of an instance, read live": 377 on Modesto). **The far plane
+    /// [`CIRCUIT_SHADE_HALF_EXTENT`] past the craft is chosen, not measured**:
+    /// the original's far plane is at the craft, and its exact offset is
+    /// unread; the half-extent keeps the craft's own far side in the map.
+    pub fn render_circuit_shade(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        layer: usize,
+        fit: &Fit,
+        reach: f32,
+        track: &Track<'_>,
+        caster: &Caster<'_>,
+    ) -> usize {
+        if layer >= self.matrices.len() {
+            return 0;
+        }
+        let matrix = Fit {
+            radius: CIRCUIT_SHADE_HALF_EXTENT,
+            ..*fit
+        }
+        .matrix_spanning(reach, CIRCUIT_SHADE_HALF_EXTENT);
+        self.matrices[layer] = matrix;
+        let sun = fit.towards_light.normalize_or_zero();
+        let drawn = self.self_shadow.render_with_circuit(
+            encoder,
+            layer,
+            matrix,
+            track,
+            |draw| within(draw, fit.centre, sun),
+            caster,
+        );
+        self.drawn[layer] = drawn;
+        drawn
     }
 
     /// Writes the matrices every [`Self::render`] and [`Self::render_self_shadow`] staged
