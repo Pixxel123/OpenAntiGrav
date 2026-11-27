@@ -208,6 +208,10 @@ pub const TITLE: &Title = &Title {
     cursor: include_str!("../../../assets/cursors/omega.svg"),
     // Not tried on Omega: its sun and craft carry-over from HD are unmeasured.
     original_shadows: oag_title::shadow::OriginalShadows::Unbuilt,
+    // The circuit's pieces cast onto craft, so a hull is shaded by the circuit in its light
+    // column and by itself (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "The
+    // circuit's pieces cast onto craft").
+    hull_shade: oag_title::shadow::HullShade::CircuitAndSelf { reach: 377.0 },
     weather: oag_title::weather::Weather::Unplayed,
     water: oag_title::water::Water {
         // The reflective seas of its 2048 circuits (`reflectplane_mid` and its siblings) draw

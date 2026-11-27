@@ -31,3 +31,13 @@ impl OriginalShadows {
         matches!(self, Self::Built)
     }
 }
+
+/// How a title's hull takes the shade of what is between it and the sun.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HullShade {
+    /// The craft's own depth map times the road's baked mask under it (Wipeout HD).
+    RoadMaskTimesSelf,
+    /// One depth map per craft that holds the circuit draws in the craft's light column
+    /// and the craft, `reach` units toward the sun (Omega).
+    CircuitAndSelf { reach: f32 },
+}
