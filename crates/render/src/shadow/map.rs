@@ -295,6 +295,36 @@ impl Fit {
         projection * view
     }
 
+    /// [`Self::matrix_reaching`] with unequal depth: the near plane (clip z 0)
+    /// sits `towards` units up the light from [`Self::centre`] and the far
+    /// plane (clip z 1) `away` units past it. The box across the light and its
+    /// basis are the same as [`Self::matrix_reaching`]'s.
+    ///
+    /// For a map that must see casters far towards the sun while spending no
+    /// depth behind the receiver.
+    #[must_use]
+    pub fn matrix_spanning(&self, towards: f32, away: f32) -> Mat4 {
+        let radius = self.radius.max(1.0);
+        let towards = towards.max(1.0);
+        let direction = self.resolved_direction();
+        let eye = self.centre + direction * towards;
+        let up = if direction.y.abs() > 0.99 {
+            Vec3::Z
+        } else {
+            Vec3::Y
+        };
+        let view = camera::look_at(eye, self.centre, up);
+        let projection = camera::orthographic(
+            -radius,
+            radius,
+            -radius,
+            radius,
+            0.0,
+            towards + away.max(0.0),
+        );
+        projection * view
+    }
+
     /// This fit, with [`Self::centre`] snapped to whole texels of a `map_size`
     /// square map, in the light's own basis.
     ///

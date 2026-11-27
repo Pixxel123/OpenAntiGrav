@@ -53,6 +53,35 @@ fn the_depth_range_is_the_one_the_receiver_tests_against() {
     assert!(at(fit().centre - Vec3::Y * 5.0) > middle);
 }
 
+/// The near plane sits `towards` units up the light from the centre and the
+/// far plane `away` units past it.
+#[test]
+fn matrix_spanning_puts_the_near_plane_towards_the_light() {
+    let matrix = Fit::craft(Vec3::ZERO, Vec3::Y).matrix_spanning(377.0, 12.0);
+    let depth = |point: Vec3| {
+        let clip = matrix * point.extend(1.0);
+        clip.z / clip.w
+    };
+    assert!(depth(Vec3::new(0.0, 377.0, 0.0)).abs() < 1e-4);
+    assert!((depth(Vec3::new(0.0, -12.0, 0.0)) - 1.0).abs() < 1e-4);
+}
+
+/// Only the depth range differs from [`Fit::matrix_reaching`]: the box across
+/// the light is the same.
+#[test]
+fn matrix_spanning_keeps_the_box_of_matrix_reaching() {
+    let fit = Fit::craft(Vec3::new(3.0, 4.0, 5.0), Vec3::new(0.3, 0.8, 0.2));
+    let point = Vec3::new(4.0, 6.0, 2.0);
+    let project = |matrix: Mat4| {
+        let clip = matrix * point.extend(1.0);
+        clip.truncate() / clip.w
+    };
+    let reaching = project(fit.matrix_reaching(70.0));
+    let spanning = project(fit.matrix_spanning(377.0, 12.0));
+    assert!((reaching.x - spanning.x).abs() < 1e-5);
+    assert!((reaching.y - spanning.y).abs() < 1e-5);
+}
+
 /// The projection is orthographic: a directional light has no position to
 /// build a perspective frustum around, and a perspective one would make a
 /// craft's shadow grow as it climbed.
