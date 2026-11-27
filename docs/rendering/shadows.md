@@ -837,20 +837,22 @@ checked per draw: Metro Park's brick, its conditional-blender grass and the tarm
 multiply.
 
 **The compare page already draws `original` on Omega.** `scripts/compare-environment.toml` writes `shadows = "original"` into
-ours' settings file for every platform, so the adopted Omega pairs carry the coverage tier and HD's hull sun occlusion today
-(Metro Park's adopted frame matches a `--shadows original` render on the hull box, 91.5 against 91.9, and the left-grass shadow,
-68.6 against 68.8; `off` reads 114.3 and 84.4). Flipping `Title::original_shadows` changes the player's default only and moves no
-pair. Building `original` on Omega properly means scoping the sun-occlusion pass off by title data (which **will** move the Omega
-pairs, the hull first) and reading the second caster list; until then the default stays `off`.
+ours' settings file for every platform. The build that made the adopted Omega pairs drew the coverage tier and HD's hull sun
+occlusion. Metro Park's adopted frame matched a `--shadows original` render of that build on the hull box, 91.5 against 91.9.
+The left-grass shadow matched too, 68.6 against 68.8. `off` reads 114.3 and 84.4. Under `original`, Omega's hull now takes the
+circuit-shade map instead (below). This change does not re-make the pairs. Flipping `Title::original_shadows` changes the
+player's default only and moves no pair. Building `original` on Omega properly means scoping the sun-occlusion pass off by title
+data (which **will** move the Omega pairs, the hull first) and reading the second caster list; until then the default stays
+`off`.
 
 **Omega's hull shade: built (2026-11-27, lane `hull-shadow-wire`).** `Title::hull_shade` on Omega is
-`HullShade::CircuitAndSelf { reach: 377.0 }`. Under `--shadows original` each craft's hull compares against a depth map
-of its own, with nine taps. The map holds the circuit's pieces near the craft and the craft. It is orthographic along the
-sun and reaches 377 units toward it. This replaces HD's road mask times the craft's map for the hull on Omega. The
-numbers, the chosen values and the open items are in
+`HullShade::CircuitAndSelf { reach: 377.0 }`. Under `--shadows original` each craft's hull compares against a depth map of its own, with nine taps. The map
+holds the circuit's pieces near the craft and the craft. It is orthographic along the sun and reaches 377 units toward it. This
+replaces HD's road mask times the craft's map for the hull on Omega. The numbers, the chosen values and the open items are in
 [track-shadow.md](../ghidra/functions/ps4-omega-eu/track-shadow.md), "Wired: Omega's hull takes the shade of the circuit".
-Chosen, not measured: the box (7 units each way), the no-cull cast, the rule that transparent draws do not cast, solid
-cutouts and the bias `0.0002`.
+Chosen, not measured: the box (7 units each way) and the far plane 7 units past the craft. The original's far plane is at the
+craft, and its exact offset is unread. Also chosen, not measured: the no-cull cast, the rule that transparent draws do not cast,
+solid cutouts and the bias `0.0002`.
 
 **What is still not built on Omega.** The road's `S` is not built: the road keeps the earlier path. The default stays
 `off`, so a player sees no change until the maintainer flips it. The `mapped` tier and every other title keep the earlier

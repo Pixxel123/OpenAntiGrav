@@ -206,10 +206,11 @@ work is in `Title::hull_shade`, `HullShade::CircuitAndSelf { reach: 377.0 }` on 
 **What the lane built.**
 
 - The map is orthographic along `Lighting.Sun direction`. `Fit::matrix_spanning` gives it a depth that runs unequally
-  either side of the craft. The far plane is at the craft and the map reaches 377 units toward the sun. This is the
-  original's law as read above.
+  either side of the craft. The map reaches 377 units toward the sun from the craft. Ours' far plane is 7 units past
+  the craft, so the depth is 384 units. That is chosen, not measured. The original's far plane is at the craft, and its
+  exact offset is unread.
 - The box is `CIRCUIT_SHADE_HALF_EXTENT = 7.0` units each way across the sun. This is chosen, not measured. The
-  original's box was 5.3 by 4.7 units on the pole slot. The fit rule is not read.
+  original's box has half-extents of 5.29 by 4.64 on the pole slot and 5.03 by 4.78 on slot 8. The fit rule is unread.
 - The casters are the circuit's `draws` and `cutouts` in the craft's light column, then the craft. The circuit casts
   with no face culling. That is chosen, not measured.
 - Transparent circuit draws do not cast. This stands in for the refractive-material rule. It is chosen, not measured.
@@ -245,22 +246,29 @@ map. The ratio is `A / (A + B)` as in [hull-tone.md](hull-tone.md), as (R, G, B)
 
 **Reading.**
 
-- **Pole slot: the acceptance holds (confidence 80).** The spine reads 0.00 against the original's 0.01. The housing
+- **Pole slot: the acceptance holds.** The spine reads 0.00 against the original's 0.01. The housing
   reads 0.00 against 0.06 to 0.16, under the 0.2 limit. Ours' B agrees with the original's B within about 5 % on the
   spine, the nose and the right wing. On the wings the original's ratio is 0.04 to 0.25 and ours is 0. The wings were
   not part of the acceptance.
-- **Slot 8, where the shade falls (confidence 70).** Both sides have the dark housing bay and the part-shaded right wing.
+- **Slot 8, where the shade falls.** Both sides have the dark housing bay and the part-shaded right wing.
 - **Slot 8, sunlit panels: the ratio differs (confidence 60 for the cause).** Ours reads 0.86 to 1.0. The original reads
-  0.49 to 0.64. The original has an additive term in both states that ours has not. On the pole slot its A is neutral grey
+  0.49 to 0.64 (R, G), and its blue reaches 0.71. The original has an additive term in both states that ours has not. On the pole slot its A is neutral grey
   (`(.039, .041, .044)` on the blue left wing) where its B is blue. On slot 8 its B on the sunlit left wing is near
   neutral (`(.211, .275, .261)`) where its A is blue. A term that does not follow the albedo and is in both states is not
   the shadow. With it subtracted, the original's shadow on the sunlit left wing is about 0.8 to 1.0. The cause is not
   proven. The hull's reflection is the candidate. Ours does not build it.
-- **Slot 8 housing on the doc's box (confidence 70).** Ours reads 0.21 to 0.23 (R, G) against the original's 0.10 to
+- **Slot 8 spine: acceptance not met.** Ours reads 0.86, 0.89 and 0.93. The acceptance was within 0.1 of 0.36 to 0.42.
+  Two reads of the original on the box `(610, 410)-(670, 450)` disagree. [hull-tone.md](hull-tone.md) has 0.36, 0.42
+  and 0.71. This run's five-frame mean has 0.49, 0.56 and 0.71. Frame by frame, the original's box moves a lot on that
+  panel. Over two runs of the same route, A goes from 0.17 to 0.25 and B from 0.19 to 0.36 (red). Thus the spine box on
+  slot 8 is not a stable acceptance box.
+- **Slot 8 housing on the doc's box.** Ours reads 0.21 to 0.23 (R, G) against the original's 0.10 to
   0.12. That is over the 0.2 limit by a few hundredths. On a tighter box, `(620, 470, 660, 530)`, ours reads 0.11 to 0.13.
-- **Bias (confidence 60).** `CIRCUIT_SHADE_BIAS` stays at 0.0002. The sunlit panels show no acne, because their B is 0.
-  The bay reads as shaded.
-- **Control.** The track panel reads 0.48 on ours and 0.49 on the original. The two states have the same exposure.
+  There is no reading of the original on that tighter box.
+- **Bias.** `CIRCUIT_SHADE_BIAS` stays at 0.0002. The nose and the left wing show no acne, because their B is 0. The
+  spine's B is 0.065. The bay reads as shaded.
+- **Control.** The track panel reads 0.48 on ours and 0.49 on the original. So A and B are almost equal on that box on
+  both sides. From this we infer that the two states have the same exposure. That is an inference, not a measurement.
 
 **Not checked.** 2048: not checkable: no 2048 package on the machine. HD and 2048 stay pixel-identical under `original`
 by construction, because their `hull_shade` keeps the earlier path. That was not measured: no HD image and no 2048

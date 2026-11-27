@@ -117,7 +117,9 @@ is `GameMode_IsHdLineage`. Results and per-box numbers: `docs/ghidra/functions/p
      [omega-hull-receives-the-shade-of-the-circuit.md](omega-hull-receives-the-shade-of-the-circuit.md).
      **Wired 2026-11-27 (lane `hull-shadow-wire`), under `--shadows original`.** The census redone on ours
      (`D = -1.0`, `FEISAR_C1`, 1920x1080, ticks 600 to 603): the unlit count went from 910 to 299 and the excess from
-     49,108 to 17,108. The original's are 496 and 25,120. Ours is now under the original's count. What remains open is the reflection and the sunlit-panel term, in that thread.
+     49,108 to 17,108. The run that gave 910 and 49,108 used `--shadows off`. `original` already ran HD's two maps on
+     Omega before this change. So the fall compares `off` with the new `original`, and it is not the effect of the
+     wiring alone. The original's are 496 and 25,120. Ours is now under the original's count. What remains open is the reflection and the sunlit-panel term, in that thread.
    - **Wired (2026-11-16, `hull-vcol-wire`): the vertex colour.** Both race hull programs multiply `VertexColour1.rgb` (baked
      occlusion, raw UNORM grey) into `albedo * light`. `oag_rcs::gcn::input_is_factor` reads it off each material's own
      programs (the vertex program exports the fetched registers unchanged, the pixel program after it multiplies the
