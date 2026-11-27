@@ -11,18 +11,17 @@ categories: [rendering]
 2026-11-27, lane `hull-shadow-wire`. The wiring is complete: `HullShade::CircuitAndSelf { reach: 377.0 }` on Omega,
 under `--shadows original` only. The values, the chosen constants and the measurement are in
 [track-shadow.md](../../docs/ghidra/functions/ps4-omega-eu/track-shadow.md), "Wired: Omega's hull takes the shade of the
-circuit". On the pole slot the acceptance holds. On slot 8 two numbers do not agree with the original.
+circuit". On the pole slot the acceptance holds. On slot 8 the sunlit panels agree with the original once its leftover term is
+subtracted. The housing bay does not.
 
 ## Open
 
-- The original has an additive term on sunlit panels that ours lacks. It is the candidate cause (confidence 60, not
-  proven) of the slot 8 sunlit-panel ratio that does not agree. Ours reads 0.86 to 1.0, the original 0.49 to 0.64. The
-  hull's reflection is the candidate source of the term.
-- Slot 8 spine: acceptance not met. Ours reads 0.86, 0.89 and 0.93. The acceptance was within 0.1 of 0.36 to 0.42.
-- Two reads of the original on the slot 8 spine box `(610, 410)-(670, 450)` disagree. `hull-tone.md` has 0.36, 0.42 and
-  0.71. This run's five-frame mean has 0.49, 0.56 and 0.71. The box moves a lot frame by frame, so it is not a stable
-  acceptance box. Find a stable box for slot 8.
-- Slot 8's housing reads 0.21 to 0.23 on ours against 0.10 to 0.12 on the original. It is 0.11 to 0.13 on a tighter box.
+- The housing bay on slot 8 has less shade on ours. With the original's leftover term subtracted, the housing reads
+  0.08 to 0.10 on the original and 0.21 to 0.23 on ours. The spine box at the bay's top edge reads 0.47 to 0.54 against
+  0.86 to 0.89. The cause is not read. One candidate: ours draws the craft into the map with its front faces culled.
+  Try the craft with no culling on this path, then measure again.
+- The original's hull shows a term that follows neither `Sun color` nor `K` nor `Ks` (the nose reads `.33` with all
+  three at 0). Ours has no such term. The hull's reflection is the candidate. Read what it is.
 - The fit of the box and of its first two axes to the craft is not read. Ours' 7 units each way is chosen, not measured.
 - Ours' far plane is 7 units past the craft (depth 384). That is chosen, not measured. The original's far plane is at the
   craft, and its exact offset is unread.

@@ -257,7 +257,9 @@ map. The ratio is `A / (A + B)` as in [hull-tone.md](hull-tone.md), as (R, G, B)
   neutral (`(.211, .275, .261)`) where its A is blue. A term that does not follow the albedo and is in both states is not
   the shadow. With it subtracted, the original's shadow on the sunlit left wing is about 0.8 to 1.0. The cause is not
   proven. The hull's reflection is the candidate. Ours does not build it.
-- **Slot 8 spine: acceptance not met.** Ours reads 0.86, 0.89 and 0.93. The acceptance was within 0.1 of 0.36 to 0.42.
+- **Slot 8 spine: acceptance not met.** "The term that is not shadow, read directly" below has the later read.
+  It supersedes the numbers in this bullet for the original.
+  Ours reads 0.86, 0.89 and 0.93. The acceptance was within 0.1 of 0.36 to 0.42.
   Two reads of the original on the box `(610, 410)-(670, 450)` disagree. [hull-tone.md](hull-tone.md) has 0.36, 0.42
   and 0.71. This run's five-frame mean has 0.49, 0.56 and 0.71. Frame by frame, the original's box moves a lot on that
   panel. Over two runs of the same route, A goes from 0.17 to 0.25 and B from 0.19 to 0.36 (red). Thus the spine box on
@@ -269,6 +271,48 @@ map. The ratio is `A / (A + B)` as in [hull-tone.md](hull-tone.md), as (R, G, B)
   spine's B is 0.065. The bay reads as shaded.
 - **Control.** The track panel reads 0.48 on ours and 0.49 on the original. So A and B are almost equal on that box on
   both sides. From this we infer that the two states have the same exposure. That is an inference, not a measurement.
+
+### The term that is not shadow, read directly (2026-11-27)
+
+The reading above infers a term that is in both states. This run reads it.
+`scripts/wipeout-pc-replay-shadow-live.py` has a fourth state for it, `NEITHER=1`. The state D has
+`Sun color` at 0 and both `K` and `Ks` at 0. What the hull shows in D is in A and in B alike. The
+table gives `(A - D) / ((A - D) + (B - D))`, the ratio with that term subtracted.
+
+The run is on the port on the Steam Deck, with the same two routes and the same boxes. Slot 8 has
+three frames for each of A, B and D. The pole slot has four. A state's frames are the port's
+screenshots from the state's `from` time to two seconds before its `to` time. The screenshot at the
+`to` time already shows the next state.
+
+| Slot | Box | Original D | Original, D subtracted (R, G, B) | Ours (R, G, B) |
+| --- | --- | --- | --- | --- |
+| 8 | nose | `.326 .323 .271` | `1.00, 0.99, 0.98` | `1, 1, 1` |
+| 8 | left wing | `.168 .242 .229` | `0.83, 0.97, 0.97` | `1, 1, 1` |
+| 8 | right wing | `.045 .063 .088` | `0.41, 0.38, 0.37` | `0.34, 0.27, 0.26` |
+| 8 | housing | `.007 .011 .029` | `0.08, 0.10, 0.14` | `0.23, 0.21, 0.15` |
+| 8 | spine | `.044 .048 .042` | `0.47, 0.54, 0.92` | `0.86, 0.89, 0.93` |
+| pole | nose | `.038 .053 .070` | `0.01, 0.00, 0.00` | `0, 0, 0` |
+| pole | spine | `.004 .006 .010` | `0.00, 0.00, -0.02` | `0, 0, 0` |
+| pole | housing | `.011 .013 .035` | `0.02, 0.01, 0.05` | `0, 0, 0` |
+| pole | right wing | `.014 .018 .019` | `0.02, 0.02, 0.01` | `0, 0, 0` |
+
+- **The term is real, and it is large on the sunlit nose (confidence 85).** On slot 8 the nose reads
+  `(.326, .323, .271)` in D. Its B is `(.325, .326, .277)`, so B less D is zero there. The nose's
+  `shadow` is thus 1.0 on the original, as on ours. The raw ratio of 0.64 was this term and not shade.
+- **The sunlit panels agree with it subtracted.** The nose and the left wing read 0.83 to 1.00 on the
+  original and 1 on ours.
+- **The part-shaded right wing is near.** The original reads 0.37 to 0.41 and ours 0.26 to 0.34.
+- **The pole slot agrees on every box.** The original reads 0.00 to 0.05 and ours 0.
+- **Two boxes still differ, both at the housing bay (confidence 70).** The housing reads 0.08 to 0.10 on
+  the original and 0.21 to 0.23 on ours. The spine box is at the top edge of the bay. It reads 0.47 to
+  0.54 on the original (R, G). Ours reads 0.86 to 0.89. So the original's shade in and above the bay
+  covers more than ours'. The cause is not read. One candidate is the craft's own faces in the map.
+  Ours draws the craft with its front faces culled. The original's caster program is unread.
+- **What the term is stays unread.** It does not follow `Sun color`, `K` or `Ks`. The hull's
+  reflection is the candidate.
+
+The pole slot's left wing reads `0.31, 0.17, 0.11` on the original, from a grey A of
+`(.088, .090, .093)`. One of its four A frames carries a bright patch there. It is not in the table.
 
 **Not checked.** 2048: not checkable: no 2048 package on the machine. HD and 2048 stay pixel-identical under `original`
 by construction, because their `hull_shade` keeps the earlier path. That was not measured: no HD image and no 2048
