@@ -10,6 +10,7 @@ Heights' authored floats, and holds three states with the sun colour at 0: `K 4,
 alone. `KNOCK=1` repeats the first two with the shadow map forced to 1, and `HOLD` is the seconds of frames per state.
 `DUMP=1` adds the raw blocks of the pass for each model instance to `note.json`.
 `NEITHER=1` adds a state with the sun and both ambient scales at 0.
+`LIVESUN=1` adds two more on top of it: the hull's live sun triple at 0, then the specular's too.
 `NOCAST=1` then clears the circuit nodes' caster bits and repeats the two again. `note.json` has the wall-clock span of each state; `wipeout-pc-replay-shadow-ratio.py` reads the frames.
 `SETTLE` is the seconds from the last replayed press to the first state. Every write is to this run's own process.
 `docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The shadow term, read by knockout".
@@ -147,6 +148,26 @@ try:
         # so it is subtracted before the ratio
         # (`docs/ghidra/functions/ps4-omega-eu/track-shadow.md`, "Wired").
         state("sD-sun0-K0-Ks0", [sun0, (12, [0.0]), (16, [0.0])], 2, hold)
+    if os.environ.get("LIVESUN") == "1":
+        # A write to `Sun color` does not reach the hull: its sun term reads the live triple at
+        # `0x800eb4810`, and the four floats before it are the specular's
+        # (`docs/ghidra/functions/ps4-omega-eu/hull-tone.md`, "The measurement"). These two
+        # states zero them in turn on top of D, and hold the write against a refill.
+        live, spec = 0x800EB4810, 0x800EB4800
+        live_keep, spec_keep = os.pread(fd, 12, live), os.pread(fd, 12, spec)
+        note["live_sun"] = list(struct.unpack("<3f", live_keep)); note["live_spec"] = list(struct.unpack("<3f", spec_keep))
+        def held(tag, addrs, settle, hold):
+            os.pwrite(fd, keep, base - 24)
+            for off, vals in [sun0, (12, [0.0]), (16, [0.0])]: put(off, vals)
+            t = time.time(); t0 = t + settle
+            while time.time() < t0 + hold:
+                for addr in addrs: os.pwrite(fd, bytes(12), addr)
+                time.sleep(0.02)
+            note["states"].append({"tag": tag, "from": time.strftime("%H%M%S", time.localtime(t0)), "to": time.strftime("%H%M%S", time.localtime(time.time()))})
+            print(tag, note["states"][-1], flush=True)
+        held("sE-D-and-live-sun0", [live], 2, hold)
+        held("sF-D-and-live-sun0-spec0", [live, spec], 2, hold)
+        os.pwrite(fd, live_keep, live); os.pwrite(fd, spec_keep, spec)
     if os.environ.get("KNOCK") == "1":
         os.pwrite(fd, bytes(8), knock)
         state("s1-map1", [], 2, 3)
